@@ -147,7 +147,7 @@ test('资料：TXT / GBK / DOCX / PDF 上传与文字提取，去重', async () 
   state.docKnowledgeId = txt.knowledge_id;
 
   const gbk = new Uint8Array([0xd6, 0xd0, 0xce, 0xc4, 0xb1, 0xe0, 0xc2, 0xeb, 0xb2, 0xe2, 0xca, 0xd4]); // “中文编码测试” GBK
-  const g = await (await upload('/documents', { file: new File([gbk], 'gbk.txt') })).json();
+  const g = await (await upload('/documents', { file: new File([gbk as BlobPart], 'gbk.txt') })).json();
   assert.equal((await api('GET', `/documents/${g.document.id}?full=1`)).text, '中文编码测试');
 
   const docx = zipSync({
@@ -155,16 +155,16 @@ test('资料：TXT / GBK / DOCX / PDF 上传与文字提取，去重', async () 
     '_rels/.rels': strToU8('<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'),
     'word/document.xml': strToU8('<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>构图的三分法则</w:t></w:r></w:p></w:body></w:document>'),
   });
-  const d = await (await upload('/documents', { file: new File([docx], '构图.docx') })).json();
+  const d = await (await upload('/documents', { file: new File([docx as BlobPart], '构图.docx') })).json();
   assert.equal(d.document.status, 'ready', d.document.error);
   assert.match((await api('GET', `/documents/${d.document.id}?full=1`)).text, /构图的三分法则/);
 
-  const pdf = await (await upload('/documents', { file: new File([tinyPdf('Perspective basics for beginners')], 'perspective.pdf') })).json();
+  const pdf = await (await upload('/documents', { file: new File([tinyPdf('Perspective basics for beginners') as BlobPart], 'perspective.pdf') })).json();
   assert.equal(pdf.document.status, 'ready', pdf.document.error);
   assert.equal(pdf.document.pages, 1);
   assert.match((await api('GET', `/documents/${pdf.document.id}?full=1`)).text, /Perspective basics/);
 
-  const dup = await (await upload('/documents', { file: new File([tinyPdf('Perspective basics for beginners')], 'again.pdf') })).json();
+  const dup = await (await upload('/documents', { file: new File([tinyPdf('Perspective basics for beginners') as BlobPart], 'again.pdf') })).json();
   assert.equal(dup.duplicate, true);
   assert.equal(dup.document.id, pdf.document.id);
 
@@ -347,7 +347,7 @@ test('内容创作中心：选题流转、AI 起草、视觉参考、发布数�
   await api('POST', `/studio/topics/${t.id}/draft`, { task: 'nope' }, 400);
 
   const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='), (ch) => ch.charCodeAt(0));
-  const refRes = await upload('/studio/refs', { file: new File([png], 'ref.png', { type: 'image/png' }), topic_id: t.id, palette: '#B5432B, #2F4A73, nope' });
+  const refRes = await upload('/studio/refs', { file: new File([png as BlobPart], 'ref.png', { type: 'image/png' }), topic_id: t.id, palette: '#B5432B, #2F4A73, nope' });
   assert.equal(refRes.status, 201);
   const ref = await refRes.json();
   assert.deepEqual(ref.palette, ['#B5432B', '#2F4A73']);
@@ -379,12 +379,12 @@ test('备份与恢复：导出不含密钥，恢复后数据完整', async () =>
   await api('DELETE', `/plans/${state.planId}`);
   assert.notEqual((await api('GET', '/backup/info')).counts.plans, before.counts.plans);
 
-  const refuse = await upload('/backup/import', { file: new File([zip], 'b.zip') });
+  const refuse = await upload('/backup/import', { file: new File([zip as BlobPart], 'b.zip') });
   assert.equal(refuse.status, 400, '未确认时拒绝恢复');
   const junk = await upload('/backup/import', { file: new File(['not a zip'], 'b.zip'), confirm: 'yes' });
   assert.equal(junk.status, 400);
 
-  const ok = await upload('/backup/import', { file: new File([zip], 'b.zip'), confirm: 'yes' });
+  const ok = await upload('/backup/import', { file: new File([zip as BlobPart], 'b.zip'), confirm: 'yes' });
   assert.equal(ok.status, 200, await ok.clone().text());
   const afterInfo = await api('GET', '/backup/info');
   assert.deepEqual(afterInfo.counts, before.counts);

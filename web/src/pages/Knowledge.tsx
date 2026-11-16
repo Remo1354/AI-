@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Download, FileText, FlaskConical, Link2, MessageSquareText, NotebookPen, Pencil, Pin, Plus, Quote, Search, Sparkles, Trash2, Upload, X,
@@ -168,7 +168,6 @@ export function Knowledge() {
   };
 
   const items: any[] = list.data?.items || [];
-  const total = useMemo(() => categories.reduce((n, c) => n + c.count, 0), [categories]);
   const filtered = !!(q || category || tag || type || domainId);
 
   return (
@@ -249,7 +248,6 @@ export function Knowledge() {
               );
             })}
           </div>
-          {total === 0 && null}
         </div>
       </div>
 
