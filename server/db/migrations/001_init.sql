@@ -11,7 +11,7 @@ CREATE TABLE domains (
   id          TEXT PRIMARY KEY,
   name        TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
-  color       TEXT NOT NULL DEFAULT 'indigo',
+  color       TEXT NOT NULL DEFAULT 'azurite',
   icon        TEXT NOT NULL DEFAULT 'book',
   sort        INTEGER NOT NULL DEFAULT 0,
   created_at  TEXT NOT NULL

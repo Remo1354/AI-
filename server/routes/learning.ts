@@ -68,7 +68,7 @@ learningRoutes.post('/domains', async (c) => {
   const max = get<{ m: number }>('SELECT COALESCE(MAX(sort), 0) AS m FROM domains')!.m;
   insert('domains', {
     id, name: requireText(b.name, '方向名称', 30), description: String(b.description || '').slice(0, 120),
-    color: String(b.color || 'indigo'), icon: String(b.icon || 'book'), sort: max + 1, created_at: now(),
+    color: String(b.color || 'azurite'), icon: String(b.icon || 'book'), sort: max + 1, created_at: now(),
   });
   return c.json(get('SELECT * FROM domains WHERE id = ?', id), 201);
 });

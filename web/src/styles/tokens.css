@@ -1,0 +1,175 @@
+/*
+ * Remo 设计系统 · 设计令牌
+ * 设计语言「纸 · 墨 · 颜料」：宣纸色的底、墨色的字、朱砂做唯一的强调色，
+ * 六个学习方向各取一种矿物颜料。所有界面只引用这里的变量，不直接写色值。
+ */
+:root {
+  color-scheme: light;
+
+  /* 纸：背景层级 */
+  --paper: #f5f2ea;        /* 应用底色 */
+  --paper-2: #efebe0;      /* 侧栏、凹陷区域 */
+  --surface: #fffdf8;      /* 卡片 */
+  --surface-2: #f3efe5;    /* 卡片内的次级块、悬停 */
+
+  /* 墨：文字层级 */
+  --ink: #1d1b18;
+  --ink-2: #57524a;
+  --ink-3: #8a8479;
+  --ink-inverse: #fbf8f1;
+
+  /* 线 */
+  --line: #e4ddce;
+  --line-strong: #cfc6b3;
+
+  /* 朱砂：唯一的强调色，只用于关键操作和当前位置 */
+  --accent: #b5432b;
+  --accent-hover: #9c3721;
+  --accent-tint: #f6e3db;
+  --accent-ink: #8f3220;
+
+  /* 状态 */
+  --ok: #2a8a66;
+  --ok-tint: #dff0e8;
+  --warn: #9a6b00;
+  --warn-tint: #f6ecd0;
+  --danger: #b3261e;
+  --danger-tint: #f9e1de;
+
+  /* 颜料：六个学习方向（已通过色觉无障碍校验，顺序固定） */
+  --pg-azurite: #2e86b5;   /* 石青 */
+  --pg-ochre: #cc7a2a;     /* 赭石 */
+  --pg-carmine: #b03468;   /* 胭脂 */
+  --pg-indigo: #4b5fc4;    /* 靛蓝 */
+  --pg-malachite: #2a8a66; /* 石绿 */
+  --pg-gamboge: #b8860f;   /* 藤黄 */
+  --pg-ink: #6e675a;       /* 未归类 */
+
+  /* 墨分五色：用于表示数量多少的单色阶 */
+  --wash-0: #ebe6d9;
+  --wash-1: #d3cbb8;
+  --wash-2: #a79e89;
+  --wash-3: #6e675a;
+  --wash-4: #2b2823;
+
+  /* 字体 */
+  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', Georgia, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei UI', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Noto Sans SC', 'WenQuanYi Micro Hei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'SF Mono', Consolas, 'Liberation Mono', monospace;
+
+  /* 字号阶梯 */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14.5px;
+  --fs-md: 16px;
+  --fs-lg: 19px;
+  --fs-xl: 24px;
+  --fs-2xl: 30px;
+
+  /* 间距（4 的倍数） */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+
+  /* 圆角与阴影：克制，靠线条和留白分层 */
+  --r-sm: 6px;
+  --r-md: 9px;
+  --r-lg: 12px;
+  --shadow-1: 0 1px 0 rgba(60, 50, 30, 0.04);
+  --shadow-pop: 0 12px 40px rgba(40, 32, 18, 0.16), 0 2px 6px rgba(40, 32, 18, 0.08);
+  --focus: 0 0 0 3px rgba(181, 67, 43, 0.22);
+
+  --sidebar-w: 236px;
+  --rail-w: 68px;
+}
+
+/* 夜间：墨色的底，纸色的字 */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #151412;
+  --paper-2: #1a1917;
+  --surface: #1d1c19;
+  --surface-2: #26241f;
+  --ink: #ece7dc;
+  --ink-2: #b6afa1;
+  --ink-3: #827c70;
+  --ink-inverse: #1a1917;
+  --line: #2f2c26;
+  --line-strong: #423e36;
+  --accent: #e0694c;
+  --accent-hover: #ea7c61;
+  --accent-tint: #3a211b;
+  --accent-ink: #f0937b;
+  --ok: #4fb389;
+  --ok-tint: #1b2f27;
+  --warn: #d2a13a;
+  --warn-tint: #33290f;
+  --danger: #ee6a60;
+  --danger-tint: #3a1c1a;
+  --pg-azurite: #3f97c6;
+  --pg-ochre: #c8823a;
+  --pg-carmine: #cc4f7e;
+  --pg-indigo: #6c7fdd;
+  --pg-malachite: #3fa272;
+  --pg-gamboge: #b88a1e;
+  --pg-ink: #8a8479;
+  --wash-0: #262420;
+  --wash-1: #3d3a33;
+  --wash-2: #6a6558;
+  --wash-3: #a39c8c;
+  --wash-4: #e6e0d3;
+  --shadow-1: 0 1px 0 rgba(0, 0, 0, 0.3);
+  --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --focus: 0 0 0 3px rgba(224, 105, 76, 0.3);
+}
+
+/* 颜料映射：任何元素加 data-color="ochre" 即可通过 --c 取到对应方向色 */
+[data-color] { --c: var(--pg-ink); }
+[data-color='azurite'] { --c: var(--pg-azurite); }
+[data-color='ochre'] { --c: var(--pg-ochre); }
+[data-color='carmine'] { --c: var(--pg-carmine); }
+[data-color='indigo'] { --c: var(--pg-indigo); }
+[data-color='malachite'] { --c: var(--pg-malachite); }
+[data-color='gamboge'] { --c: var(--pg-gamboge); }
+
+/*
+ * 内容创作中心「叠绘工作室」：独立的视觉分区。
+ * 不随明暗主题变化，始终是深色画室 + 叠色高光，与学习区的纸面气质区分开。
+ */
+.studio-zone {
+  color-scheme: dark;
+  --paper: #17161b;
+  --paper-2: #1c1b21;
+  --surface: #211f27;
+  --surface-2: #2b2932;
+  --ink: #f2ede4;
+  --ink-2: #bcb5c2;
+  --ink-3: #857f8d;
+  --ink-inverse: #17161b;
+  --line: #34313c;
+  --line-strong: #4a4654;
+  --accent: #e9a23b;
+  --accent-hover: #f2b458;
+  --accent-tint: #3b2d14;
+  --accent-ink: #f5c477;
+  --ok: #5cc39a;
+  --ok-tint: #1c3029;
+  --warn: #e9a23b;
+  --warn-tint: #3b2d14;
+  --danger: #f0786e;
+  --danger-tint: #3d1e1c;
+  --layer-a: #e0694c;
+  --layer-b: #6c7fdd;
+  --layer-c: #e9a23b;
+  --shadow-pop: 0 16px 48px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --focus: 0 0 0 3px rgba(233, 162, 59, 0.3);
+  background: var(--paper);
+  color: var(--ink);
+}
