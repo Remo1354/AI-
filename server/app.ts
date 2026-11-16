@@ -8,14 +8,7 @@ import { seed } from './db/seed';
 import { issueSession, passwordMatches, verifySession } from './lib/crypto';
 import { HttpError, readJson } from './lib/http';
 import { AiError } from './ai/types';
-import { aiRoutes } from './routes/ai';
-import { chatRoutes } from './routes/chat';
-import { documentRoutes } from './routes/documents';
-import { knowledgeRoutes } from './routes/knowledge';
-import { learningRoutes } from './routes/learning';
-import { researchRoutes } from './routes/research';
-import { studioRoutes } from './routes/studio';
-import { systemRoutes } from './routes/system';
+import { MODULES } from './modules';
 
 const COOKIE = 'remo_session';
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
@@ -69,7 +62,7 @@ export function createApp() {
 
   // ── 可选的访问密码 ──────────────────────────────────────────
   const api = new Hono();
-  api.get('/health', (c) => c.json({ ok: true, name: 'remo-ai-learning-platform', time: new Date().toISOString() }));
+  api.get('/health', (c) => c.json({ ok: true, name: 'remo-ai-workspace', modules: MODULES.map((m) => m.id), time: new Date().toISOString() }));
   api.get('/auth/status', (c) =>
     c.json({ required: !!config.appPassword, authenticated: !config.appPassword || verifySession(getCookie(c, COOKIE)) }));
   api.post('/auth/login', async (c) => {
@@ -79,7 +72,9 @@ export function createApp() {
       await new Promise((r) => setTimeout(r, 600)); // 降低暴力尝试速度
       throw new HttpError(401, 'bad_password', '密码不正确');
     }
-    setCookie(c, COOKIE, issueSession(), { httpOnly: true, sameSite: 'Lax', path: '/', maxAge: 30 * 86400 });
+    // 经由 HTTPS（含反向代理）访问时，Cookie 只允许走加密连接
+    const https = c.req.header('x-forwarded-proto') === 'https' || c.req.url.startsWith('https:');
+    setCookie(c, COOKIE, issueSession(), { httpOnly: true, sameSite: 'Lax', path: '/', maxAge: 30 * 86400, secure: https });
     return c.json({ ok: true });
   });
   api.post('/auth/logout', (c) => {
@@ -93,9 +88,7 @@ export function createApp() {
     await next();
   });
 
-  for (const r of [systemRoutes, aiRoutes, chatRoutes, documentRoutes, knowledgeRoutes, learningRoutes, researchRoutes, studioRoutes]) {
-    api.route('/', r);
-  }
+  for (const m of MODULES) api.route('/', m.routes);
   api.all('*', (c) => c.json({ error: { code: 'not_found', message: '接口不存在' } }, 404));
   app.route('/api', api);
 

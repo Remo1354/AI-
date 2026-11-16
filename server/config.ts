@@ -42,6 +42,10 @@ function build() {
     appPassword: process.env.APP_PASSWORD || '',
     appSecret: process.env.APP_SECRET || '',
     maxUploadBytes: num(process.env.MAX_UPLOAD_MB, 40) * 1024 * 1024,
+    backupDir: path.join(dataDir, 'backups'),
+    autoBackupHours: num(process.env.AUTO_BACKUP_HOURS, 0),
+    autoBackupKeep: Math.max(1, num(process.env.AUTO_BACKUP_KEEP, 7)),
+    allowInsecure: process.env.ALLOW_NO_PASSWORD === '1',
     ai: {
       maxTokens: num(process.env.AI_MAX_TOKENS, 32000),
       contextChars: num(process.env.AI_CONTEXT_CHARS, 60000),

@@ -56,11 +56,16 @@ knowledgeRoutes.get('/knowledge', (c) => {
 
 knowledgeRoutes.post('/knowledge', async (c) => {
   const b = await readJson(c);
+  // 传入 document_id 时，为一份已上传的资料建立知识条目（每份资料只对应一条）
+  const doc = b.document_id ? getDocument(String(b.document_id)) : undefined;
+  if (b.document_id && !doc) throw notFound('资料');
+  const existing = doc ? get<{ id: string }>('SELECT id FROM knowledge_items WHERE document_id = ?', doc.id) : undefined;
+  if (existing) return c.json(detail(existing.id));
   const id = createKnowledge({
-    type: b.type === 'summary' ? 'summary' : 'note',
+    type: doc ? 'document' : b.type === 'summary' ? 'summary' : 'note',
     title: requireText(b.title, '标题', 200), content: String(b.content || ''), summary: String(b.summary || ''),
     category_id: b.category_id, domain_id: b.domain_id, tags: b.tags, source_url: b.source_url,
-    source_kind: b.source_kind || 'manual', source_id: b.source_id,
+    source_kind: doc ? 'upload' : b.source_kind || 'manual', source_id: b.source_id, document_id: doc?.id,
   });
   return c.json(detail(id), 201);
 });

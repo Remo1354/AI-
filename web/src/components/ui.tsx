@@ -22,14 +22,17 @@ export function Modal({ title, onClose, children, footer, wide, className = '' }
   title?: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean; className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
+  // 只在打开时聚焦一次、关闭时把焦点还回去；不随父组件重渲染反复抢焦点
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close.current(); };
     document.addEventListener('keydown', onKey);
     const prev = document.activeElement as HTMLElement | null;
-    const first = ref.current?.querySelector<HTMLElement>('[autofocus], input, textarea, select, button');
+    const first = ref.current?.querySelector<HTMLElement>('[autofocus], input:not([type=file]):not([hidden]), textarea, select, button');
     first?.focus();
     return () => { document.removeEventListener('keydown', onKey); prev?.focus?.(); };
-  }, [onClose]);
+  }, []);
   return (
     <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className={`modal ${wide ? 'wide' : ''} ${className}`} role="dialog" aria-modal="true" aria-label={title} ref={ref}>

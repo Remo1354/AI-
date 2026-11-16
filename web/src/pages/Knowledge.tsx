@@ -135,7 +135,7 @@ export function Knowledge() {
     if (!doc) return;
     api.get(`/documents/${doc}`).then(async (d) => {
       if (d.knowledge?.[0]) return navigate(`/knowledge/${d.knowledge[0].id}`, { replace: true });
-      const item = await api.post('/knowledge', { title: d.title, source_kind: 'upload' }).catch(() => null);
+      const item = await api.post('/knowledge', { title: d.title, document_id: d.id }).catch(() => null);
       if (item) navigate(`/knowledge/${item.id}`, { replace: true });
     }).catch(() => setParams({}, { replace: true }));
   }, [params, navigate, setParams]);

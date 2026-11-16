@@ -1,43 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import {
-  BookOpen, FlaskConical, GraduationCap, LayoutDashboard, Layers, MessageSquareText, MoreHorizontal, Search, Settings as SettingsIcon,
-  FileText, NotebookPen, ListChecks, Globe,
-} from 'lucide-react';
+import { FileText, FlaskConical, Globe, Layers, ListChecks, MessageSquareText, MoreHorizontal, NotebookPen, Search, Settings as SettingsIcon } from 'lucide-react';
 import { api } from '../lib/api';
+import { MOBILE_PRIMARY, MODULES, isActive } from '../modules';
 import { Modal, Snippet, Spinner } from './ui';
 
 export function BrandMark({ className = 'brand-mark' }: { className?: string }) {
   // 「叠绘」：三层半透明色块错位相叠
   return (
     <svg className={className} viewBox="0 0 32 32" aria-hidden="true">
-      <g style={{ mixBlendMode: 'multiply' }}>
-        <rect x="3" y="3" width="16" height="16" rx="4" fill="var(--accent)" opacity="0.9" />
-        <rect x="8.5" y="8.5" width="16" height="16" rx="4" fill="var(--pg-azurite)" opacity="0.8" />
-        <rect x="13.5" y="13" width="15" height="15" rx="4" fill="var(--pg-gamboge)" opacity="0.82" />
-      </g>
+      <rect x="3" y="3" width="16" height="16" rx="4" fill="var(--accent)" opacity="0.92" />
+      <rect x="8.5" y="8.5" width="16" height="16" rx="4" fill="var(--pg-azurite)" opacity="0.78" />
+      <rect x="13.5" y="13" width="15" height="15" rx="4" fill="var(--pg-gamboge)" opacity="0.8" />
     </svg>
   );
 }
 
 const Brand = () => (
-  <Link to="/" className="brand" aria-label="Remo 学习平台首页">
+  <Link to="/" className="brand" aria-label="Remo AI Workspace 首页">
     <BrandMark />
     <div className="brand-text">
       <div className="brand-name">Remo</div>
-      <div className="brand-sub">Learning</div>
+      <div className="brand-sub">AI Workspace</div>
     </div>
   </Link>
 );
 
-const NAV = [
-  { to: '/', label: '总览', icon: LayoutDashboard, end: true, section: '' },
-  { to: '/assistant', label: 'AI 助手', icon: MessageSquareText, section: '学习' },
-  { to: '/knowledge', label: '知识库', icon: BookOpen, section: '' },
-  { to: '/learning', label: '学习中心', icon: GraduationCap, section: '' },
-  { to: '/research', label: '研究实验室', icon: FlaskConical, section: '' },
-  { to: '/studio', label: '内容创作', icon: Layers, section: '创作' },
-];
 
 const KIND: Record<string, { label: string; icon: typeof FileText }> = {
   knowledge: { label: '知识', icon: NotebookPen },
@@ -128,7 +116,8 @@ export function Shell() {
 
   useEffect(() => { mainRef.current?.scrollTo(0, 0); setMore(false); }, [location.pathname]);
 
-  const inStudio = location.pathname.startsWith('/studio');
+  const zone = MODULES.find((m) => m.zone && isActive(m, location.pathname))?.zone;
+  const secondary = MODULES.slice(MOBILE_PRIMARY);
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
   return (
@@ -141,12 +130,12 @@ export function Shell() {
       <aside className="sidebar">
         <Brand />
         <nav aria-label="主导航">
-          {NAV.map((n) => (
-            <div key={n.to}>
-              {n.section && <div className="nav-section">{n.section}</div>}
-              <NavLink to={n.to} end={n.end} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} title={n.label}>
-                <n.icon /><span>{n.label}</span>
-              </NavLink>
+          {MODULES.map((m) => (
+            <div key={m.id}>
+              {m.section && <div className="nav-section">{m.section}</div>}
+              <Link to={m.path} className={`nav-item ${isActive(m, location.pathname) ? 'active' : ''}`} title={m.label} aria-current={isActive(m, location.pathname) ? 'page' : undefined}>
+                <m.icon /><span>{m.label}</span>
+              </Link>
             </div>
           ))}
         </nav>
@@ -160,17 +149,17 @@ export function Shell() {
         </div>
       </aside>
 
-      <main className={`main ${inStudio ? 'studio-zone' : ''}`} ref={mainRef}>
+      <main className={`main ${zone ? `${zone}-zone` : ''}`} ref={mainRef}>
         <Outlet />
       </main>
 
       <nav className="mobile-nav" aria-label="主导航">
-        {NAV.slice(0, 4).map((n) => (
-          <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => (isActive ? 'active' : '')}>
-            <n.icon /><span>{n.label.replace('AI ', '')}</span>
-          </NavLink>
+        {MODULES.slice(0, MOBILE_PRIMARY).map((m) => (
+          <Link key={m.id} to={m.path} className={isActive(m, location.pathname) ? 'active' : ''}>
+            <m.icon /><span>{m.short || m.label}</span>
+          </Link>
         ))}
-        <button onClick={() => setMore(true)} className={['/research', '/studio', '/settings'].some((p) => location.pathname.startsWith(p)) ? 'active' : ''}>
+        <button onClick={() => setMore(true)} className={secondary.some((m) => isActive(m, location.pathname)) || location.pathname.startsWith('/settings') ? 'active' : ''}>
           <MoreHorizontal /><span>更多</span>
         </button>
       </nav>
@@ -179,8 +168,8 @@ export function Shell() {
         <Modal title="更多" onClose={() => setMore(false)}>
           <div className="modal-body" style={{ paddingBottom: 20 }}>
             <div className="list">
-              {[...NAV.slice(4), { to: '/settings', label: '设置', icon: SettingsIcon }].map((n) => (
-                <Link key={n.to} to={n.to} className="list-row"><n.icon className="type-icon" /><span>{n.label}</span></Link>
+              {[...secondary, { id: 'settings', path: '/settings', label: '设置', icon: SettingsIcon }].map((m) => (
+                <Link key={m.id} to={m.path} className="list-row"><m.icon className="type-icon" /><span>{m.label}</span></Link>
               ))}
             </div>
           </div>

@@ -278,6 +278,25 @@ function DataTab() {
         </div>
         <p className="hint">命令行也可以：<code>npm run backup</code> 生成备份到 backups/ 目录；<code>npm run restore -- 备份文件.zip</code> 恢复。知识库的 Markdown 导出是通用格式，可以直接导入 Obsidian 等工具。</p>
       </div>
+      {d && (
+        <div className="card pad stack">
+          <h2 style={{ fontSize: 17 }}>自动备份</h2>
+          {d.auto_backup.hours > 0
+            ? <p className="muted small">每 {d.auto_backup.hours} 小时自动在数据目录的 backups 文件夹里留一份完整备份，保留最近 {d.auto_backup.keep} 份。它能防误删和数据损坏；要防磁盘丢失，请定期把备份下载到别处。</p>
+            : <p className="muted small">当前未开启。在 .env 里设置 <code>AUTO_BACKUP_HOURS=24</code> 并重启，平台会每天自动留一份完整备份（Docker 部署默认已开启）。</p>}
+          {d.auto_backup.files.length > 0 && (
+            <div className="list divided">
+              {d.auto_backup.files.map((f: any) => (
+                <div key={f.name} className="list-row" style={{ padding: '8px 0' }}>
+                  <span className="grow small num">{clock(f.created_at)}</span>
+                  <span className="xs faint num">{bytes(f.bytes)}</span>
+                  <a className="btn sm" href={`/api/backup/auto/${f.name}`} download><Download />下载</a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {info.loading && !d && <Loading />}
       {d && (
         <div className="card pad stack">

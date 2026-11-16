@@ -10,12 +10,7 @@ import { api, setUnauthorizedHandler } from './lib/api';
 import { AppProvider } from './lib/store';
 import { BrandMark, Shell } from './components/Shell';
 import { Loading } from './components/ui';
-import { Dashboard } from './pages/Dashboard';
-import { Assistant } from './pages/Assistant';
-import { Knowledge, KnowledgeDetail } from './pages/Knowledge';
-import { Learning, PlanDetail } from './pages/Learning';
-import { Research, ResearchDetail } from './pages/Research';
-import { Studio, TopicDetail } from './pages/Studio';
+import { MODULES } from './modules';
 import { Settings } from './pages/Settings';
 
 function Login({ onDone }: { onDone: () => void }) {
@@ -38,7 +33,7 @@ function Login({ onDone }: { onDone: () => void }) {
   return (
     <div className="login">
       <form className="card stack lg" onSubmit={submit}>
-        <div className="row"><BrandMark /><h1 style={{ fontSize: 22 }}>Remo 学习平台</h1></div>
+        <div className="row"><BrandMark /><h1 style={{ fontSize: 22 }}>Remo AI Workspace</h1></div>
         <label className="field">
           <span className="label">访问密码</span>
           <input className="input" type="password" autoFocus value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
@@ -84,16 +79,7 @@ createRoot(document.getElementById('root')!).render(
         <AppProvider>
           <Routes>
             <Route element={<Shell />}>
-              <Route index element={<Dashboard />} />
-              <Route path="assistant/:id?" element={<Assistant />} />
-              <Route path="knowledge" element={<Knowledge />} />
-              <Route path="knowledge/:id" element={<KnowledgeDetail />} />
-              <Route path="learning" element={<Learning />} />
-              <Route path="learning/plans/:id" element={<PlanDetail />} />
-              <Route path="research" element={<Research />} />
-              <Route path="research/:id" element={<ResearchDetail />} />
-              <Route path="studio" element={<Studio />} />
-              <Route path="studio/:id" element={<TopicDetail />} />
+              {MODULES.flatMap((m) => m.routes).map((r) => <Route key={r.path} path={r.path} element={r.element} />)}
               <Route path="settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

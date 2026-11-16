@@ -36,6 +36,7 @@ export function dataInfo() {
     uploads_bytes: dirSize(config.uploadDir),
     uploads_count: fs.existsSync(config.uploadDir) ? fs.readdirSync(config.uploadDir).length : 0,
     counts: dataCounts(),
+    auto_backup: { hours: config.autoBackupHours, keep: config.autoBackupKeep, files: listAutoBackups() },
   };
 }
 
@@ -132,4 +133,52 @@ export function restoreBackup(buf: Uint8Array) {
   openDb(); // 重新打开并执行尚未应用的迁移（兼容旧版本备份）
   for (const k of keys) run("UPDATE providers SET api_key_enc = ? WHERE id = ? AND api_key_enc = ''", k.api_key_enc, k.id);
   return { restored_at: now(), files, counts: dataCounts(), backup_created_at: manifest.created_at, kept_suffix: `.before-restore-${stamp}` };
+}
+
+// ── 自动备份：定时在数据目录里留一份快照，只保留最近 N 份 ──────────────
+const AUTO_PREFIX = 'auto-';
+const AUTO_NAME = /^auto-remo-backup-[0-9]{8}-[0-9]{6}\.zip$/;
+
+export function listAutoBackups(): { name: string; bytes: number; created_at: string }[] {
+  if (!fs.existsSync(config.backupDir)) return [];
+  return fs.readdirSync(config.backupDir)
+    .filter((f) => AUTO_NAME.test(f))
+    .map((name) => {
+      const st = fs.statSync(path.join(config.backupDir, name));
+      return { name, bytes: st.size, created_at: st.mtime.toISOString() };
+    })
+    .sort((a, b) => b.name.localeCompare(a.name));
+}
+
+export function autoBackupPath(name: string): string | null {
+  if (!AUTO_NAME.test(name)) return null; // 严格匹配文件名，杜绝路径穿越
+  const file = path.join(config.backupDir, name);
+  return fs.existsSync(file) ? file : null;
+}
+
+export function runAutoBackup() {
+  fs.mkdirSync(config.backupDir, { recursive: true });
+  const { zip, filename } = createBackup();
+  fs.writeFileSync(path.join(config.backupDir, AUTO_PREFIX + filename), zip);
+  for (const old of listAutoBackups().slice(config.autoBackupKeep)) {
+    try { fs.unlinkSync(path.join(config.backupDir, old.name)); } catch { /* ignore */ }
+  }
+}
+
+/** 启动后按 AUTO_BACKUP_HOURS 的间隔执行；距离上一份自动备份不足一个间隔时不重复生成。 */
+export function startAutoBackup() {
+  if (!(config.autoBackupHours > 0)) return;
+  const interval = config.autoBackupHours * 3600_000;
+  const tick = () => {
+    try {
+      const latest = listAutoBackups()[0];
+      if (latest && Date.now() - new Date(latest.created_at).getTime() < interval - 60_000) return;
+      runAutoBackup();
+      console.log(`[backup] 已生成自动备份（保留最近 ${config.autoBackupKeep} 份）：${config.backupDir}`);
+    } catch (err) {
+      console.error('[backup] 自动备份失败：', (err as Error).message);
+    }
+  };
+  setTimeout(tick, 15_000).unref();
+  setInterval(tick, Math.min(interval, 6 * 3600_000)).unref();
 }

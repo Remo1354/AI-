@@ -204,11 +204,8 @@ export function Assistant() {
     setStreaming(false);
     setThinking(false);
     abort.current = null;
-    if (ac.signal.aborted) {
-      // 停止后服务端会保存已生成的部分，稍等片刻取回真实记录
-      setTimeout(() => loadConv(cid).catch(() => {}), 500);
-    }
-    convs.reload();
+    // 与服务端对齐：拿到自动生成的标题和真实消息记录。停止生成时服务端稍后才写入已生成的部分。
+    setTimeout(() => { loadConv(cid).catch(() => {}); convs.reload(); }, ac.signal.aborted ? 500 : 0);
   };
 
   // 从总览页带着问题过来：自动填入并发送
@@ -254,7 +251,7 @@ export function Assistant() {
   const uploadDoc = async (file: File) => {
     try {
       const cid = await ensureConversation();
-      const r = await api.upload('/documents', { file, conversation_id: cid });
+      const r = await api.upload('/documents', { file, conversation_id: cid, to_knowledge: '1' });
       if (r.document.status !== 'ready') toast(r.document.error || '这份文件没有可用的文字内容', 'error');
       else toast(`已附加《${r.document.title}》`);
       const c = await api.get(`/conversations/${cid}`);

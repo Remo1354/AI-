@@ -19,23 +19,35 @@ const { config } = await import('./config');
 const { createApp } = await import('./app');
 const { closeDb } = await import('./db');
 const { listModelOptions } = await import('./ai/registry');
+const { startAutoBackup } = await import('./lib/backup');
+
+const loopback = ['127.0.0.1', 'localhost', '::1'].includes(config.host);
+if (!loopback && !config.appPassword && !config.allowInsecure) {
+  console.error(`\n拒绝启动：HOST=${config.host} 会让其他设备访问到这个服务，但没有设置访问密码。`);
+  console.error('请在 .env（或部署环境变量）里设置 APP_PASSWORD 后重试。');
+  console.error('只有在可信的内网里确实不需要密码时，才设置 ALLOW_NO_PASSWORD=1 跳过这项检查。\n');
+  process.exit(1);
+}
 
 const app = createApp();
 const server = serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => {
   const shown = config.host === '0.0.0.0' ? 'localhost' : config.host;
   const models = listModelOptions().length;
   console.log('');
-  console.log('  Remo AI Learning Platform');
+  console.log('  Remo AI Workspace');
   console.log(`  ➜ 服务地址   http://${shown}:${info.port}`);
   console.log(`  ➜ 数据目录   ${config.dataDir}`);
   console.log(`  ➜ AI 模型    ${models ? `已配置 ${models} 个` : '尚未配置（打开「设置 → 模型」添加）'}`);
   console.log(`  ➜ 访问密码   ${config.appPassword ? '已启用' : '未启用'}`);
-  if (config.host !== '127.0.0.1' && config.host !== 'localhost' && !config.appPassword) {
-    console.log('  ⚠ 当前允许非本机访问但没有设置 APP_PASSWORD，任何能访问这个地址的人都能使用你的数据和 API Key。');
+  if (!loopback && !config.appPassword) {
+    console.log('  ⚠ 当前允许非本机访问且没有访问密码（ALLOW_NO_PASSWORD=1）：任何能访问这个地址的人都能使用你的数据和 API Key。');
   }
+  if (config.autoBackupHours > 0) console.log(`  ➜ 自动备份   每 ${config.autoBackupHours} 小时，保留 ${config.autoBackupKeep} 份`);
   if (config.env !== 'production') console.log('  ➜ 开发模式：前端请访问 http://127.0.0.1:5173');
   console.log('');
 });
+
+startAutoBackup();
 
 server.on('error', (err: NodeJS.ErrnoException) => {
   if (err.code === 'EADDRINUSE') {

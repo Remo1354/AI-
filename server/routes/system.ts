@@ -1,7 +1,9 @@
 import { Hono } from 'hono';
 import { all, get } from '../db';
 import { badRequest, isDate, today } from '../lib/http';
-import { createBackup, dataInfo, restoreBackup } from '../lib/backup';
+import fs from 'node:fs';
+import { autoBackupPath, createBackup, dataInfo, restoreBackup } from '../lib/backup';
+import { notFound } from '../lib/http';
 import { DOC_PUBLIC_COLUMNS } from '../lib/documents';
 import { defaultModelRef, listModelOptions } from '../ai/registry';
 import { learningStats, tasksForDay } from './learning';
@@ -73,4 +75,14 @@ systemRoutes.post('/backup/import', async (c) => {
   if (!(form.file instanceof File)) throw badRequest('请选择备份文件（.zip）');
   if (form.confirm !== 'yes') throw badRequest('恢复会替换当前全部数据，请在界面上确认后再试。');
   return c.json(restoreBackup(new Uint8Array(await form.file.arrayBuffer())));
+});
+
+/** 下载一份自动备份（文件名严格校验）。 */
+systemRoutes.get('/backup/auto/:name', (c) => {
+  const file = autoBackupPath(c.req.param('name'));
+  if (!file) throw notFound('备份文件');
+  const buf = fs.readFileSync(file);
+  return new Response(buf as BodyInit, {
+    headers: { 'content-type': 'application/zip', 'content-length': String(buf.length), 'content-disposition': `attachment; filename="${c.req.param('name')}"` },
+  });
 });

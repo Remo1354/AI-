@@ -35,7 +35,9 @@ before(async () => { mock = await startMockAi(); });
 after(async () => { await mock.close(); closeDb(); fs.rmSync(dataDir, { recursive: true, force: true }); });
 
 test('基础：健康检查、默认学习方向与分类', async () => {
-  assert.equal((await api('GET', '/health')).ok, true);
+  const health = await api('GET', '/health');
+  assert.equal(health.ok, true);
+  assert.ok(health.modules.includes('learning') && health.modules.includes('studio'), '模块注册表生效');
   const domains = await api('GET', '/domains');
   assert.equal(domains.length, 6);
   assert.ok(domains.some((d: any) => d.name === '艺术理论与艺术史'));
@@ -392,6 +394,30 @@ test('备份与恢复：导出不含密钥，恢复后数据完整', async () =>
   assert.deepEqual((await api('GET', '/knowledge?q=' + encodeURIComponent('互补色'))).items.map((i: any) => i.title), ['色彩构成基础'], '全文索引随备份恢复');
   assert.equal((await api('GET', '/ai/providers'))[0].has_key, true, '同机恢复保留已填写的密钥');
   assert.ok(fs.readdirSync(dataDir).some((f) => f.includes('.before-restore-')), '恢复前的数据被保留');
+});
+
+test('自动备份：生成、轮转、下载，文件名严格校验', async () => {
+  const { runAutoBackup, listAutoBackups } = await import('../server/lib/backup');
+  const { config } = await import('../server/config');
+  config.autoBackupKeep = 2;
+  fs.mkdirSync(config.backupDir, { recursive: true });
+  for (const stamp of ['20200101-000000', '20200102-000000', '20200103-000000']) {
+    fs.writeFileSync(path.join(config.backupDir, `auto-remo-backup-${stamp}.zip`), 'old');
+  }
+  fs.writeFileSync(path.join(config.backupDir, 'my-own-file.zip'), 'keep me');
+  runAutoBackup();
+  const files = listAutoBackups();
+  assert.equal(files.length, 2, '只保留最近 2 份');
+  assert.ok(files[0].bytes > 1000 && files[1].name.includes('20200103'));
+  assert.ok(fs.existsSync(path.join(config.backupDir, 'my-own-file.zip')), '不触碰非自动备份文件');
+  assert.equal((await api('GET', '/backup/info')).auto_backup.files.length, 2);
+
+  const ok = await app.request(`/api/backup/auto/${files[0].name}`, { headers: { host: 'localhost' } });
+  assert.equal(ok.status, 200);
+  assert.ok(unzipSync(new Uint8Array(await ok.arrayBuffer()))['manifest.json']);
+  for (const bad of ['my-own-file.zip', '..%2Fremo.sqlite', 'auto-remo-backup-x.zip']) {
+    assert.equal((await app.request(`/api/backup/auto/${bad}`, { headers: { host: 'localhost' } })).status, 404, bad);
+  }
 });
 
 test('安全：跨站写请求与陌生 Host 被拒绝', async () => {

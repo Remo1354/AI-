@@ -1,0 +1,33 @@
+# Remo AI Workspace · 云端 / 服务器一键部署
+#
+#   1. 复制 .env.example 为 .env，至少填写 APP_PASSWORD（联网访问必须有密码）
+#   2. docker compose up -d --build
+#   3. 打开 http://<服务器地址>:8787
+#
+# 数据保存在名为 remo-data 的持久卷里，升级或重建容器不会丢失。
+# 公网使用请在前面加一层 HTTPS 反向代理，见 docs/DEPLOY.md。
+
+services:
+  remo:
+    build: .
+    image: remo-ai-workspace:latest
+    container_name: remo-ai-workspace
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8787}:8787"
+    environment:
+      APP_PASSWORD: "${APP_PASSWORD:?请先在 .env 中设置 APP_PASSWORD}"
+      APP_SECRET: "${APP_SECRET:-}"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      ANTHROPIC_MODELS: "${ANTHROPIC_MODELS:-}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_BASE_URL: "${OPENAI_BASE_URL:-https://api.openai.com/v1}"
+      OPENAI_MODELS: "${OPENAI_MODELS:-}"
+      AUTO_BACKUP_HOURS: "${AUTO_BACKUP_HOURS:-24}"
+      AUTO_BACKUP_KEEP: "${AUTO_BACKUP_KEEP:-7}"
+      MAX_UPLOAD_MB: "${MAX_UPLOAD_MB:-40}"
+    volumes:
+      - remo-data:/data
+
+volumes:
+  remo-data:
