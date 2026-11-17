@@ -137,6 +137,11 @@ try {
     const reply = await page.locator('.msg.assistant .prose').innerText();
     if (!reply.includes('回复：用初学者能懂的方式讲讲什么是补色')) throw new Error(`回复内容不符：${reply}`);
     await page.waitForSelector('.chat-title:has-text("用初学者能懂")');
+    const calls = mock.requests.length;
+    await page.click('text=重新生成');
+    await page.waitForSelector('.msg.assistant .msg-actions:has-text("重新生成")', { timeout: 15000 });
+    if (mock.requests.length !== calls + 1) throw new Error('重新生成没有发起新的模型调用');
+    if ((await page.locator('.msg.user').count()) !== 1 || (await page.locator('.msg.assistant').count()) !== 1) throw new Error('重新生成后应仍是一问一答');
     await page.click('text=存入知识库');
     await page.fill('.modal input >> nth=0', '补色是什么');
     await page.click('.modal-foot .btn.primary');
@@ -169,10 +174,13 @@ try {
     planUrl = page.url();
     await page.locator('.task-row .check').first().click();
     await page.waitForSelector('.check.done');
+    await page.click('text=顺手记录');
+    await page.waitForSelector('.toast:has-text("已记录 1 小时 30 分")');
+    await page.waitForSelector('text=累计学习 1 小时 30 分');
     await page.click('.page-actions >> text=记录学习');
     await page.fill('.modal textarea', '临摹了三张莫奈的色彩小稿，注意到阴影里其实有很多冷色。');
     await page.click('.modal-foot .btn.primary');
-    await page.waitForSelector('.toast:has-text("已记录")');
+    await page.waitForSelector('text=累计学习 2 小时');
     await page.waitForTimeout(300);
     await shot('04-plan-detail');
   });

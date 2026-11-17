@@ -85,13 +85,29 @@ function TaskModal({ task, planId, onClose, onSaved }: { task?: any; planId?: st
   );
 }
 
+/** 刚刚勾选完成、还可以顺手记一笔学习时长的任务。放在模块级，列表刷新后仍然有效。 */
+const justCompleted = new Set<string>();
+
 function TaskRow({ t, onChange, onEdit, showPlan = true }: { t: any; onChange: () => void; onEdit: (t: any) => void; showPlan?: boolean }) {
-  const { domain, fail } = useApp();
+  const { domain, fail, toast } = useApp();
   const today = localDate();
   const d = domain(t.effective_domain_id ?? t.domain_id);
   const done = t.status === 'done';
+  const logMinutes = t.estimate_min || 30;
   const toggle = async () => {
-    try { await api.patch(`/tasks/${t.id}`, { status: done ? 'todo' : 'done', date: today }); onChange(); } catch (err) { fail(err); }
+    try {
+      await api.patch(`/tasks/${t.id}`, { status: done ? 'todo' : 'done', date: today });
+      if (done) justCompleted.delete(t.id); else justCompleted.add(t.id);
+      onChange();
+    } catch (err) { fail(err); }
+  };
+  const logIt = async () => {
+    try {
+      await api.post('/logs', { date: today, minutes: logMinutes, plan_id: t.plan_id, domain_id: t.effective_domain_id ?? t.domain_id, content: `完成：${t.title}` });
+      justCompleted.delete(t.id);
+      toast(`已记录 ${minutes(logMinutes)}学习`);
+      onChange();
+    } catch (err) { fail(err); }
   };
   const remove = async () => {
     if (!confirmDelete(`任务「${t.title}」`)) return;
@@ -109,6 +125,9 @@ function TaskRow({ t, onChange, onEdit, showPlan = true }: { t: any; onChange: (
           {t.estimate_min ? <span>约 {minutes(t.estimate_min)}</span> : null}
           {t.notes && <span className="truncate" style={{ maxWidth: 260 }}>{t.notes}</span>}
         </div>
+        {done && justCompleted.has(t.id) && (
+          <button className="tag accent" style={{ marginTop: 6 }} onClick={logIt}><Plus />顺手记录 {minutes(logMinutes)}学习</button>
+        )}
       </div>
       <div className="actions">
         <button className="btn ghost icon sm" onClick={() => onEdit(t)} aria-label="编辑"><Pencil /></button>

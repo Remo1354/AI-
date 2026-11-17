@@ -157,20 +157,36 @@ chatRoutes.post('/conversations/:id/messages', async (c) => {
   const conv = get<ConversationRow>('SELECT * FROM conversations WHERE id = ?', c.req.param('id'));
   if (!conv) throw notFound('对话');
   const b = await readJson(c);
-  const content = requireText(b.content, '消息内容', 200_000);
+  // regenerate：不新增提问，丢弃上一次的回答（包括失败或被中止的），对同一个问题重新作答
+  const regenerate = b.regenerate === true;
+  const lastUser = regenerate
+    ? get<MessageRow>("SELECT * FROM messages WHERE conversation_id = ? AND role = 'user' ORDER BY rowid DESC LIMIT 1", conv.id)
+    : undefined;
+  if (regenerate && !lastUser) throw badRequest('这个对话里还没有可以重新回答的问题');
+  const content = lastUser ? lastUser.content : requireText(b.content, '消息内容', 200_000);
   const modelRef = (b.model_ref as string | undefined) || conv.model_ref;
-  const resolved = resolveModel(modelRef); // 未配置模型时在这里抛出 409，不会写入任何消息
+  const resolved = resolveModel(modelRef); // 未配置模型时在这里抛出 409，不会写入或删除任何消息
 
   const ts = now();
-  const userId = newId('msg');
+  const userId = lastUser?.id ?? newId('msg');
   const isFirst = !get('SELECT id FROM messages WHERE conversation_id = ? LIMIT 1', conv.id);
   const context = buildContext(conv.id, content);
   tx(() => {
-    insert('messages', { id: userId, conversation_id: conv.id, role: 'user', content, created_at: ts });
     const patch: Record<string, unknown> = { updated_at: ts, model_ref: resolved.ref };
-    if (isFirst && conv.title === '新对话') patch.title = content.replace(/\s+/g, ' ').slice(0, 28);
+    if (lastUser) {
+      const stale = all<{ id: string }>(
+        "SELECT id FROM messages WHERE conversation_id = ? AND role = 'assistant' AND rowid > (SELECT rowid FROM messages WHERE id = ?)",
+        conv.id, lastUser.id);
+      for (const m of stale) {
+        run("DELETE FROM search_index WHERE kind = 'message' AND ref_id = ?", m.id);
+        run('DELETE FROM messages WHERE id = ?', m.id);
+      }
+    } else {
+      insert('messages', { id: userId, conversation_id: conv.id, role: 'user', content, created_at: ts });
+      if (isFirst && conv.title === '新对话') patch.title = content.replace(/\s+/g, ' ').slice(0, 28);
+      indexDoc('message', userId, String(patch.title || conv.title), content, conv.id);
+    }
     update('conversations', conv.id, patch, ['updated_at', 'model_ref', 'title']);
-    indexDoc('message', userId, String(patch.title || conv.title), content, conv.id);
   });
 
   const history = buildHistory(conv.id);

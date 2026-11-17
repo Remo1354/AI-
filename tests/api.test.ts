@@ -113,6 +113,20 @@ test('对话：流式回复、消息持久化、调用记录', async () => {
 
   const calls = await api('GET', '/ai/calls');
   assert.ok(calls.calls.some((c: any) => c.purpose === 'chat' && c.status === 'ok' && c.output_tokens === 7));
+
+  // 重新生成：不新增提问，只替换最后一条回答
+  const before = (await api('GET', `/conversations/${conv.id}`)).messages;
+  const regen = parseSse(await (await app.request(`/api/conversations/${conv.id}/messages`, json('POST', { regenerate: true }))).text());
+  assert.equal(regen[0].data.user_message_id, before[2].id, '沿用原来的提问');
+  assert.ok(regen.find((e) => e.event === 'done'));
+  const after = (await api('GET', `/conversations/${conv.id}`)).messages;
+  assert.equal(after.length, 4);
+  assert.deepEqual(after.slice(0, 3).map((m: any) => m.id), before.slice(0, 3).map((m: any) => m.id));
+  assert.notEqual(after[3].id, before[3].id, '旧回答被新回答取代');
+  assert.equal(mock.requests.at(-1)!.body.messages.at(-1).content, '举个例子', '模型收到的仍是原问题');
+  const empty = await api('POST', '/conversations', {}, 201);
+  assert.equal((await app.request(`/api/conversations/${empty.id}/messages`, json('POST', { regenerate: true }))).status, 400);
+  await api('DELETE', `/conversations/${empty.id}`);
 });
 
 test('Anthropic 适配器：通过官方 SDK 走通流式调用', async () => {

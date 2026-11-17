@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowUp, BookmarkPlus, Check, Copy, FileText, Layers, Menu, Paperclip, Pencil, Pin, Plus, Square, Trash2, Upload, X,
+  ArrowUp, BookmarkPlus, Check, Copy, FileText, Layers, Menu, Paperclip, Pencil, Pin, Plus, RotateCcw, Square, Trash2, Upload, X,
 } from 'lucide-react';
 import { api, streamChat } from '../lib/api';
 import { chars, localDate, timeAgo } from '../lib/format';
@@ -172,32 +172,24 @@ export function Assistant() {
     return c.id;
   };
 
-  const send = async (text?: string) => {
-    const content = (text ?? input).trim();
-    if (!content || streaming) return;
-    if (!models.configured) { toast('请先在设置中配置 AI 模型', 'error'); return; }
-    let cid: string;
-    try { cid = await ensureConversation(); } catch (err) { fail(err); return; }
-    setInput('');
+  /** 发起一次流式回答。tempUser 为空表示重新生成（不新增提问）。 */
+  const runStream = async (cid: string, body: Record<string, unknown>, tempUser: string | null) => {
     stick.current = true;
-    const tempUser = `tmp-u-${Date.now()}`;
-    const tempBot = `tmp-a-${Date.now()}`;
-    setMessages((m) => [...m, { id: tempUser, role: 'user', content }, { id: tempBot, role: 'assistant', content: '', pending: true }]);
     setStreaming(true);
     setThinking(false);
     const ac = new AbortController();
     abort.current = ac;
-    const patchBot = (fn: (m: Message) => Message) => setMessages((list) => list.map((m) => (m.id === tempBot || m.pending ? fn(m) : m)));
+    const patchBot = (fn: (m: Message) => Message) => setMessages((list) => list.map((m) => (m.pending ? fn(m) : m)));
 
-    await streamChat(cid, { content, model_ref: modelRef || undefined, date: localDate() }, {
-      onMeta: (meta) => setMessages((list) => list.map((m) => (m.id === tempUser ? { ...m, id: meta.user_message_id } : m.id === tempBot ? { ...m, context_note: meta.context } : m))),
+    await streamChat(cid, { ...body, model_ref: modelRef || undefined, date: localDate() }, {
+      onMeta: (meta) => setMessages((list) => list.map((m) => (tempUser && m.id === tempUser ? { ...m, id: meta.user_message_id } : m.pending ? { ...m, context_note: meta.context } : m))),
       onThinking: () => setThinking(true),
       onDelta: (t) => { setThinking(false); patchBot((m) => ({ ...m, content: m.content + t })); },
-      onDone: (message) => setMessages((list) => list.map((m) => (m.pending ? { ...message, pending: false } : m))),
+      onDone: (message) => patchBot(() => ({ ...message, pending: false })),
       onError: (err) => {
-        if (err.message_record) setMessages((list) => list.map((m) => (m.pending ? { ...err.message_record, pending: false } : m)));
+        if (err.message_record) patchBot(() => ({ ...err.message_record, pending: false }));
         else patchBot((m) => ({ ...m, pending: false, error: err.message }));
-        if (err.code === 'ai_not_configured') setMessages((list) => list.filter((m) => m.id !== tempUser && !m.id.startsWith('tmp-')));
+        if (err.code === 'ai_not_configured') setMessages((list) => list.filter((m) => !m.id.startsWith('tmp-')));
       },
     }, ac.signal);
 
@@ -206,6 +198,29 @@ export function Assistant() {
     abort.current = null;
     // 与服务端对齐：拿到自动生成的标题和真实消息记录。停止生成时服务端稍后才写入已生成的部分。
     setTimeout(() => { loadConv(cid).catch(() => {}); convs.reload(); }, ac.signal.aborted ? 500 : 0);
+  };
+
+  const send = async (text?: string) => {
+    const content = (text ?? input).trim();
+    if (!content || streaming) return;
+    if (!models.configured) { toast('请先在设置中配置 AI 模型', 'error'); return; }
+    let cid: string;
+    try { cid = await ensureConversation(); } catch (err) { fail(err); return; }
+    setInput('');
+    const tempUser = `tmp-u-${Date.now()}`;
+    setMessages((m) => [...m, { id: tempUser, role: 'user', content }, { id: `tmp-a-${Date.now()}`, role: 'assistant', content: '', pending: true }]);
+    await runStream(cid, { content }, tempUser);
+  };
+
+  /** 对最后一个问题重新作答：用于回答失败、被中止，或想换个模型再问一次。 */
+  const regenerate = async () => {
+    if (!conv || streaming) return;
+    if (!models.configured) { toast('请先在设置中配置 AI 模型', 'error'); return; }
+    setMessages((list) => {
+      const lastUser = list.map((m) => m.role).lastIndexOf('user');
+      return [...list.slice(0, lastUser + 1), { id: `tmp-a-${Date.now()}`, role: 'assistant', content: '', pending: true }];
+    });
+    await runStream(conv.id, { regenerate: true }, null);
   };
 
   // 从总览页带着问题过来：自动填入并发送
@@ -354,7 +369,7 @@ export function Assistant() {
             </div>
           ) : (
             <div className="chat-inner">
-              {messages.map((m) => m.role === 'user' ? (
+              {messages.map((m, i) => m.role === 'user' ? (
                 <div key={m.id} className="msg user"><div className="bubble">{m.content}</div></div>
               ) : (
                 <div key={m.id} className="msg assistant">
@@ -373,10 +388,17 @@ export function Assistant() {
                         : `资料较长，本次检索了 ${m.context_note.chunks} 个相关片段（共约 ${chars(m.context_note.chars)}）`}
                     </div>
                   )}
-                  {!m.pending && m.content && (
+                  {!m.pending && (m.content || i === messages.length - 1) && (
                     <div className="msg-actions">
-                      <button className="btn ghost sm" onClick={() => copy(m)}>{copied === m.id ? <Check /> : <Copy />}{copied === m.id ? '已复制' : '复制'}</button>
-                      <button className="btn ghost sm" onClick={() => setSaving(m)}><BookmarkPlus />存入知识库</button>
+                      {m.content && <>
+                        <button className="btn ghost sm" onClick={() => copy(m)}>{copied === m.id ? <Check /> : <Copy />}{copied === m.id ? '已复制' : '复制'}</button>
+                        <button className="btn ghost sm" onClick={() => setSaving(m)}><BookmarkPlus />存入知识库</button>
+                      </>}
+                      {i === messages.length - 1 && !streaming && (
+                        <button className="btn ghost sm" onClick={regenerate} disabled={!models.configured} title="用当前选择的模型对同一个问题重新作答">
+                          <RotateCcw />{m.error && !m.content ? '重试' : '重新生成'}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

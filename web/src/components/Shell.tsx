@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FileText, FlaskConical, Globe, Layers, ListChecks, MessageSquareText, MoreHorizontal, NotebookPen, Search, Settings as SettingsIcon } from 'lucide-react';
 import { api } from '../lib/api';
 import { MOBILE_PRIMARY, MODULES, isActive } from '../modules';
-import { Modal, Snippet, Spinner } from './ui';
+import { Loading, Modal, Snippet, Spinner } from './ui';
 
 export function BrandMark({ className = 'brand-mark' }: { className?: string }) {
   // 「叠绘」：三层半透明色块错位相叠
@@ -150,7 +150,9 @@ export function Shell() {
       </aside>
 
       <main className={`main ${zone ? `${zone}-zone` : ''}`} ref={mainRef}>
-        <Outlet />
+        <Suspense fallback={<div className="page"><Loading /></div>}>
+          <Outlet />
+        </Suspense>
       </main>
 
       <nav className="mobile-nav" aria-label="主导航">

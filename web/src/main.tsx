@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { StrictMode, lazy, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 // 标题用的思源宋体随应用打包（按 unicode-range 切片，浏览器只下载用到的部分），不依赖外部字体服务
@@ -11,7 +11,7 @@ import { AppProvider } from './lib/store';
 import { BrandMark, Shell } from './components/Shell';
 import { Loading } from './components/ui';
 import { MODULES } from './modules';
-import { Settings } from './pages/Settings';
+const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 
 function Login({ onDone }: { onDone: () => void }) {
   const [password, setPassword] = useState('');

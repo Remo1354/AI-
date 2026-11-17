@@ -7,14 +7,20 @@
  *   3. 后端在 server/modules.ts 登记对应的路由文件，并按需新增数据库迁移。
  * 导航栏、手机底栏和路由表都由这份列表生成，不需要改动外壳代码。
  */
-import type { ReactNode } from 'react';
+import { lazy, type ReactNode } from 'react';
 import { BookOpen, FlaskConical, GraduationCap, LayoutDashboard, Layers, MessageSquareText, type LucideIcon } from 'lucide-react';
 import { Dashboard } from './pages/Dashboard';
-import { Assistant } from './pages/Assistant';
-import { Knowledge, KnowledgeDetail } from './pages/Knowledge';
-import { Learning, PlanDetail } from './pages/Learning';
-import { Research, ResearchDetail } from './pages/Research';
-import { Studio, TopicDetail } from './pages/Studio';
+
+// 总览随首屏加载；其余模块在第一次进入时才下载对应的代码
+const Assistant = lazy(() => import('./pages/Assistant').then((m) => ({ default: m.Assistant })));
+const Knowledge = lazy(() => import('./pages/Knowledge').then((m) => ({ default: m.Knowledge })));
+const KnowledgeDetail = lazy(() => import('./pages/Knowledge').then((m) => ({ default: m.KnowledgeDetail })));
+const Learning = lazy(() => import('./pages/Learning').then((m) => ({ default: m.Learning })));
+const PlanDetail = lazy(() => import('./pages/Learning').then((m) => ({ default: m.PlanDetail })));
+const Research = lazy(() => import('./pages/Research').then((m) => ({ default: m.Research })));
+const ResearchDetail = lazy(() => import('./pages/Research').then((m) => ({ default: m.ResearchDetail })));
+const Studio = lazy(() => import('./pages/Studio').then((m) => ({ default: m.Studio })));
+const TopicDetail = lazy(() => import('./pages/Studio').then((m) => ({ default: m.TopicDetail })));
 
 export interface WorkspaceModule {
   id: string;
