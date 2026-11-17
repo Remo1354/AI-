@@ -7,6 +7,7 @@ import { api, streamChat } from '../lib/api';
 import { chars, localDate, timeAgo } from '../lib/format';
 import { useApp, useData } from '../lib/store';
 import { AiNotice, DomainSelect, Empty, Field, Loading, Markdown, Modal, Spinner, confirmDelete } from '../components/ui';
+import { CardDraftModal } from './Cards';
 
 interface Message {
   id: string; role: 'user' | 'assistant'; content: string; error?: string | null; model_ref?: string | null;
@@ -120,6 +121,7 @@ export function Assistant() {
   const [streaming, setStreaming] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [saving, setSaving] = useState<Message | null>(null);
+  const [carding, setCarding] = useState<Message | null>(null);
   const [attaching, setAttaching] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [copied, setCopied] = useState('');
@@ -428,6 +430,7 @@ export function Assistant() {
                       {m.content && <>
                         <button className="btn ghost sm" onClick={() => copy(m)}>{copied === m.id ? <Check /> : <Copy />}{copied === m.id ? '已复制' : '复制'}</button>
                         <button className="btn ghost sm" onClick={() => setSaving(m)}><BookmarkPlus />存入知识库</button>
+                        <button className="btn ghost sm" onClick={() => setCarding(m)} title="把这段回答里值得记住的内容做成复习卡片"><Layers />出卡片</button>
                       </>}
                       {i === messages.length - 1 && !streaming && (
                         <button className="btn ghost sm" onClick={regenerate} disabled={!models.configured} title="用当前选择的模型对同一个问题重新作答">
@@ -477,6 +480,12 @@ export function Assistant() {
       </section>
 
       {saving && <SaveModal message={saving} onClose={() => setSaving(null)} />}
+      {carding && (
+        <CardDraftModal
+          source={{ text: carding.content, title: conv?.title, domainId: conv?.domain_id }} onClose={() => setCarding(null)}
+          onSaved={(n) => { setCarding(null); toast(`已保存 ${n} 张卡片，今天开始复习`); }}
+        />
+      )}
       {attaching && (
         <AttachModal attached={(conv?.documents || []).map((d: any) => d.id)} onClose={() => setAttaching(false)} onUpload={uploadDoc} onPick={pickDoc} />
       )}

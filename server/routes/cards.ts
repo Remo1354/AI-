@@ -148,19 +148,26 @@ cardRoutes.post('/cards/:id/review', async (c) => {
   return c.json({ card: present(get<CardRow>(`${SELECT} WHERE c.id = ?`, card.id)!, date), stats: cardStats(date) });
 });
 
-/** AI 根据一条知识（或它关联的资料）起草卡片。只返回草稿，由用户确认后再保存。 */
+/** AI 根据一条知识（或它关联的资料）、或任意一段文字（例如助手的回答）起草卡片。只返回草稿，由用户确认后再保存。 */
 cardRoutes.post('/cards/generate', async (c) => {
   const b = await readJson(c);
-  const item = get<{ id: string; title: string; content: string; summary: string; key_points: string; document_id: string | null }>(
-    'SELECT id, title, content, summary, key_points, document_id FROM knowledge_items WHERE id = ?', b.knowledge_id);
-  if (!item) throw notFound('知识条目');
-  const doc = item.document_id ? getDocument(item.document_id) : undefined;
-  const text = [item.summary, item.content, doc?.text].filter(Boolean).join('\n\n');
-  if (text.trim().length < 20) throw badRequest('内容太少，暂时出不了卡片');
+  let title = String(b.title || '').trim().slice(0, 200);
+  let text = String(b.text || '').trim();
+  let itemId: string | null = null;
+  if (b.knowledge_id) {
+    const item = get<{ id: string; title: string; content: string; summary: string; document_id: string | null }>(
+      'SELECT id, title, content, summary, document_id FROM knowledge_items WHERE id = ?', b.knowledge_id);
+    if (!item) throw notFound('知识条目');
+    const doc = item.document_id ? getDocument(item.document_id) : undefined;
+    itemId = item.id;
+    title = item.title;
+    text = [item.summary, item.content, doc?.text].filter(Boolean).join('\n\n');
+  }
+  if (text.trim().length < 10) throw badRequest('内容太少，暂时出不了卡片');
   const LIMIT = 60_000;
   const truncated = text.length > LIMIT;
   const count = Math.min(Math.max(Math.round(Number(b.count)) || 8, 3), 20);
-  const existing = all<{ front: string }>('SELECT front FROM cards WHERE knowledge_id = ? LIMIT 60', item.id).map((r) => r.front);
+  const existing = itemId ? all<{ front: string }>('SELECT front FROM cards WHERE knowledge_id = ? LIMIT 60', itemId).map((r) => r.front) : [];
   const { data, modelRef } = await completeJson<{ cards?: unknown }>({
     system: CARDS_SYSTEM,
     messages: [{
@@ -168,11 +175,11 @@ cardRoutes.post('/cards/generate', async (c) => {
       content: [
         `请出 ${count} 张左右的卡片。`,
         existing.length ? `已经有这些卡片，不要重复：\n${existing.map((f) => `- ${f}`).join('\n')}` : '',
-        `标题：${item.title}`,
+        title ? `标题：${title}` : '',
         `内容${truncated ? `（较长，以下是前 ${LIMIT} 字）` : ''}：\n${text.slice(0, LIMIT)}`,
       ].filter(Boolean).join('\n\n'),
     }],
-    purpose: 'cards', refId: item.id, maxTokens: 8000,
+    purpose: 'cards', refId: itemId ?? undefined, maxTokens: 8000,
   });
   const cards = (Array.isArray(data.cards) ? data.cards : [])
     .map((x: any) => ({ front: String(x?.front || '').trim(), back: String(x?.back || '').trim() }))

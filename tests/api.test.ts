@@ -380,6 +380,12 @@ test('复习卡片：间隔重复排程、到期队列、AI 出卡草稿', async
   assert.equal((await api('GET', `/cards?knowledge_id=${state.knowledgeId}`)).length, 2);
   assert.equal((await api('GET', '/dashboard?date=2026-03-02')).cards.due, 2, '总览带上待复习数量');
 
+  // 也可以直接依据一段文字出卡（例如助手的回答）
+  const fromText = await api('POST', '/cards/generate', { title: '补色', text: '补色是色相环上相对的两种颜色，例如红与绿、蓝与橙。' });
+  assert.equal(fromText.cards.length, 2);
+  assert.match(mock.requests.at(-1)!.body.messages[1].content, /红与绿、蓝与橙/);
+  await api('POST', '/cards/generate', { text: '太短' }, 400);
+
   const again = await api('POST', '/cards/generate', { knowledge_id: state.knowledgeId });
   assert.ok(again.cards.length > 0);
   assert.match(mock.requests.at(-1)!.body.messages[1].content, /不要重复[\s\S]*色彩的三个属性是什么/, '再次出题时告知已有卡片');

@@ -478,7 +478,7 @@ export function KnowledgeDetail() {
         </aside>
       </div>
       {picking && <LinkPicker itemId={id} onClose={() => setPicking(false)} onLinked={(d) => { setData(d); suggestions.reload(); }} />}
-      {carding && <CardDraftModal knowledgeId={id} onClose={() => setCarding(false)} onSaved={(n) => { setCarding(false); cards.reload(); toast(`已保存 ${n} 张卡片，今天开始复习`); }} />}
+      {carding && <CardDraftModal source={{ knowledgeId: id }} onClose={() => setCarding(false)} onSaved={(n) => { setCarding(false); cards.reload(); toast(`已保存 ${n} 张卡片，今天开始复习`); }} />}
     </div>
   );
 }

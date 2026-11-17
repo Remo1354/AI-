@@ -142,6 +142,10 @@ try {
     await page.waitForSelector('.msg.assistant .msg-actions:has-text("重新生成")', { timeout: 15000 });
     if (mock.requests.length !== calls + 1) throw new Error('重新生成没有发起新的模型调用');
     if ((await page.locator('.msg.user').count()) !== 1 || (await page.locator('.msg.assistant').count()) !== 1) throw new Error('重新生成后应仍是一问一答');
+    await page.click('text=出卡片');
+    await page.waitForSelector('.card-draft');
+    if (!String(mock.requests.at(-1)!.body.messages[1].content).includes('回复：用初学者能懂的方式讲讲什么是补色')) throw new Error('出卡没有依据这段回答');
+    await page.keyboard.press('Escape');
     await page.click('text=存入知识库');
     await page.fill('.modal input >> nth=0', '补色是什么');
     await page.click('.modal-foot .btn.primary');
@@ -256,6 +260,13 @@ try {
     await page.waitForSelector('text=今天的复习完成了');
     await page.click('text=全部卡片');
     await page.waitForSelector('.list-row:has-text("下次复习 明天")');
+    await page.click('text=批量导入');
+    await page.fill('.modal textarea', 'ephemeral | 短暂的\nchiaroscuro\t明暗对照法\ncomposition：构图\n\nno-separator');
+    await page.waitForSelector('.modal .list-row:has-text("没有识别到背面")');
+    await page.click('text=导入 4 张');
+    await page.waitForSelector('.toast:has-text("已导入 4 张卡片")');
+    await page.waitForSelector('.list-row:has-text("明暗对照法")');
+    await page.waitForSelector('.list-row:has-text("构图")');
   });
 
   await step('研究实验室：来源 → 陈述 → 事实核查（引文校验）→ 报告（自动来源列表）', async () => {
