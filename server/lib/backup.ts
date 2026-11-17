@@ -11,7 +11,7 @@ export const BACKUP_APP = 'remo-ai-learning-platform';
 export const BACKUP_FORMAT = 1;
 
 const COUNT_TABLES = [
-  'conversations', 'messages', 'documents', 'knowledge_items', 'plans', 'tasks', 'study_logs', 'reviews',
+  'conversations', 'messages', 'documents', 'knowledge_items', 'plans', 'tasks', 'study_logs', 'reviews', 'cards',
   'research_projects', 'research_sources', 'research_reports', 'content_topics', 'content_refs',
 ];
 

@@ -7,6 +7,7 @@ import { notFound } from '../lib/http';
 import { DOC_PUBLIC_COLUMNS } from '../lib/documents';
 import { defaultModelRef, listModelOptions } from '../ai/registry';
 import { learningStats, tasksForDay } from './learning';
+import { cardStats } from './cards';
 import { config } from '../config';
 
 export const systemRoutes = new Hono();
@@ -23,6 +24,7 @@ systemRoutes.get('/dashboard', (c) => {
     ai: { configured: options.length > 0, default: options.find((o) => o.ref === def) ?? null },
     stats: learningStats(date),
     tasks_today: tasksForDay(date),
+    cards: cardStats(date),
     plans: all(
       `SELECT p.id, p.title, p.domain_id, p.target_date,
           (SELECT COUNT(*) FROM tasks t WHERE t.plan_id = p.id) AS tasks_total,

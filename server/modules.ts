@@ -15,6 +15,7 @@ import { chatRoutes } from './routes/chat';
 import { documentRoutes } from './routes/documents';
 import { knowledgeRoutes } from './routes/knowledge';
 import { learningRoutes } from './routes/learning';
+import { cardRoutes } from './routes/cards';
 import { researchRoutes } from './routes/research';
 import { studioRoutes } from './routes/studio';
 
@@ -31,6 +32,7 @@ export const MODULES: ServerModule[] = [
   { id: 'documents', name: '资料与文件', routes: documentRoutes },
   { id: 'knowledge', name: '知识库与搜索', routes: knowledgeRoutes },
   { id: 'learning', name: '学习中心', routes: learningRoutes },
+  { id: 'cards', name: '复习卡片', routes: cardRoutes },
   { id: 'research', name: '研究实验室', routes: researchRoutes },
   { id: 'studio', name: '内容创作中心', routes: studioRoutes },
 ];

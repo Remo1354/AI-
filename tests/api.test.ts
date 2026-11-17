@@ -289,6 +289,56 @@ test('学习中心：计划、任务、记录、统计、AI 生成计划与阶�
   assert.ok(dash.knowledge.total >= 4);
 });
 
+test('复习卡片：间隔重复排程、到期队列、AI 出卡草稿', async () => {
+  const { schedule } = await import('../server/routes/cards');
+  const fresh = { interval_days: 0, ease: 2.5, reps: 0, lapses: 0 };
+  assert.deepEqual(schedule(fresh, 'good', '2026-03-01'), { interval_days: 1, ease: 2.5, reps: 1, lapses: 0, due_date: '2026-03-02' });
+  assert.equal(schedule(fresh, 'easy', '2026-03-01').due_date, '2026-03-05');
+  const second = schedule({ interval_days: 1, ease: 2.5, reps: 1, lapses: 0 }, 'good', '2026-03-02');
+  assert.equal(second.interval_days, 3);
+  const third = schedule({ ...second }, 'good', '2026-03-05');
+  assert.equal(third.interval_days, 8, '之后按难度系数成倍增长（3 × 2.5 四舍五入）');
+  const lapse = schedule({ ...third }, 'again', '2026-03-13');
+  assert.deepEqual([lapse.interval_days, lapse.reps, lapse.lapses, lapse.due_date], [0, 0, 1, '2026-03-13'], '忘了：当天重来');
+  assert.equal(lapse.ease, 2.3);
+  assert.equal(schedule({ interval_days: 300, ease: 3.2, reps: 9, lapses: 0 }, 'easy', '2026-03-01').interval_days, 365, '间隔封顶一年');
+
+  // AI 起草：只返回草稿，不落库；没有答案的卡片被过滤
+  const draft = await api('POST', '/cards/generate', { knowledge_id: state.knowledgeId });
+  assert.equal(draft.cards.length, 2);
+  assert.match(mock.requests.at(-1)!.body.messages[1].content, /色相、明度、纯度/, '依据知识条目的内容出题');
+  assert.equal((await api('GET', '/cards')).length, 0);
+
+  const saved = await api('POST', '/cards', { cards: draft.cards, knowledge_id: state.knowledgeId, ai_generated: true, date: '2026-03-01' }, 201);
+  assert.equal(saved.created, 2);
+  await api('POST', '/cards', { front: 'ephemeral', back: '短暂的；例：Fame is ephemeral.', domain_id: 'english', date: '2026-03-01' }, 201);
+  await api('POST', '/cards', { front: '  ' }, 400);
+
+  let due = await api('GET', '/cards?scope=due&date=2026-03-01');
+  assert.equal(due.length, 3);
+  assert.equal(due[0].domain_id, 'digital-art', '卡片继承知识条目的学习方向');
+  assert.deepEqual(due[0].next, { again: 0, hard: 1, good: 1, easy: 4 }, '附带每个评分对应的下次间隔');
+  assert.equal(due[0].knowledge_title, '色彩构成基础');
+
+  const r1 = await api('POST', `/cards/${due[0].id}/review`, { rating: 'good', date: '2026-03-01' });
+  assert.equal(r1.card.due_date, '2026-03-02');
+  assert.equal(r1.stats.due, 2);
+  assert.equal(r1.stats.reviewed_today, 1);
+  await api('POST', `/cards/${due[1].id}/review`, { rating: 'again', date: '2026-03-01' });
+  assert.equal((await api('GET', '/cards/stats?date=2026-03-01')).due, 2, '忘了的卡片今天还要再过一遍');
+  await api('POST', `/cards/${due[1].id}/review`, { rating: 'bogus' }, 400);
+
+  await api('PATCH', `/cards/${due[2].id}`, { suspended: true });
+  assert.equal((await api('GET', '/cards/stats?date=2026-03-01')).due, 1, '暂停的卡片不进入队列');
+  assert.equal((await api('GET', '/cards/stats?date=2026-03-02')).due, 2);
+  assert.equal((await api('GET', `/cards?knowledge_id=${state.knowledgeId}`)).length, 2);
+  assert.equal((await api('GET', '/dashboard?date=2026-03-02')).cards.due, 2, '总览带上待复习数量');
+
+  const again = await api('POST', '/cards/generate', { knowledge_id: state.knowledgeId });
+  assert.ok(again.cards.length > 0);
+  assert.match(mock.requests.at(-1)!.body.messages[1].content, /不要重复[\s\S]*色彩的三个属性是什么/, '再次出题时告知已有卡片');
+});
+
 test('研究实验室：来源、引用校验、事实核查（引文必须逐字可追溯）、报告', async () => {
   const { checkCitations, quoteAppearsIn } = await import('../server/routes/research');
   assert.deepEqual(checkCitations('事实 A [S1]，事实 B [S2, S3]，事实 C【S9】。', [1, 2, 3, 4]), { cited: [1, 2, 3], invalid: [9], unused: [4] });

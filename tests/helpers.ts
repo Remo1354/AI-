@@ -46,6 +46,13 @@ function replyFor(mock: MockAi, system: string, lastUser: string): string {
       ],
     });
   }
+  if (system.includes('"front"')) {
+    return JSON.stringify({ cards: [
+      { front: '色彩的三个属性是什么？', back: '色相、明度、纯度。' },
+      { front: '互补色在色相环上的位置关系？', back: '位于色相环的两端，并置时对比最强。' },
+      { front: '没有答案的卡片会被丢弃', back: '' },
+    ] });
+  }
   if (system.includes('"verdict"')) return JSON.stringify(mock.factcheck);
   if (system.includes('引用规则')) return mock.researchText;
   return `回复：${lastUser}`;
