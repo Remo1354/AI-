@@ -86,7 +86,7 @@ async function step(name: string, fn: () => Promise<void>) {
 try {
   await startApp();
   const browser = await playwright.chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN', acceptDownloads: true });
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: SHOTS ? 2 : 1, locale: 'zh-CN', acceptDownloads: true });
   const page = await ctx.newPage();
   activePage = page;
   page.on('console', (m: import('playwright').ConsoleMessage) => { if (m.type() === 'error') problems.push(`浏览器控制台报错：${m.text().slice(0, 200)}`); });
