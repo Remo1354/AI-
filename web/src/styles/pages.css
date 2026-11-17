@@ -118,6 +118,23 @@
 .inline-add .input { height: 34px; }
 .day-head { font-family: var(--font-serif); font-weight: 600; font-size: 14.5px; padding: var(--s-4) 0 var(--s-2); display: flex; align-items: baseline; gap: 10px; }
 
+/* ── 复习卡片 ─────────────────────────────────────────────── */
+.flash-wrap { display: flex; flex-direction: column; gap: var(--s-4); max-width: 680px; margin: 0 auto; width: 100%; }
+.flash { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-1); padding: var(--s-10) var(--s-8); min-height: 260px; display: flex; flex-direction: column; justify-content: center; gap: var(--s-3); }
+.flash-front { font-family: var(--font-serif); font-weight: 600; font-size: 24px; line-height: 1.5; text-align: center; white-space: pre-wrap; overflow-wrap: anywhere; }
+.flash-back { font-size: 16px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; text-align: center; }
+.flash .rule { width: 48px; margin: var(--s-3) auto; border-top-color: var(--line-strong); }
+.rate-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2); }
+.rate { border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--r-md); padding: 10px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; border-bottom-width: 3px; }
+.rate:hover { background: var(--surface-2); }
+.rate b { font-size: 15px; }
+.rate span { font-size: var(--fs-xs); color: var(--ink-3); }
+.rate-again { border-bottom-color: var(--danger); }
+.rate-hard { border-bottom-color: var(--warn); }
+.rate-good { border-bottom-color: var(--ok); }
+.rate-easy { border-bottom-color: var(--pg-azurite); }
+.card-draft { display: flex; gap: var(--s-2); align-items: flex-start; padding: var(--s-3); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); }
+
 /* ── 研究实验室 ───────────────────────────────────────────── */
 .steps { display: flex; gap: 0; border: 1px solid var(--line-strong); border-radius: var(--r-md); overflow: hidden; }
 .steps button { border: 0; background: var(--surface); padding: 6px 14px; font-size: 13px; color: var(--ink-3); border-right: 1px solid var(--line-strong); }
@@ -228,6 +245,8 @@
   .cal-day { min-height: 64px; padding: 3px; }
   .cal-item { padding: 1px 3px; font-size: 10.5px; }
   .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .flash { padding: var(--s-8) var(--s-5); min-height: 220px; }
+  .flash-front { font-size: 20px; }
   .kv { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .kv dd { margin-bottom: 8px; }
 }

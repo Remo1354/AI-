@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Download, FileText, FlaskConical, Link2, MessageSquareText, NotebookPen, Pencil, Pin, Plus, Quote, Search, Sparkles, Trash2, Upload, X,
+  Download, FileText, FlaskConical, Layers, Link2, MessageSquareText, NotebookPen, Pencil, Pin, Plus, Quote, Search, Sparkles, Trash2, Upload, X,
 } from 'lucide-react';
 import { api, qs } from '../lib/api';
 import { bytes, chars, timeAgo } from '../lib/format';
 import { useAction, useApp, useData } from '../lib/store';
 import { AiNotice, DomainSelect, DomainTag, Empty, Field, Loading, Markdown, Modal, PageHead, Snippet, Spinner, Tabs, confirmDelete } from '../components/ui';
+import { CardDraftModal } from './Cards';
 
 const TYPES: Record<string, { label: string; icon: typeof FileText }> = {
   note: { label: '笔记', icon: NotebookPen },
@@ -300,6 +301,8 @@ export function KnowledgeDetail() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ title: '', content: '', tags: '' });
   const [picking, setPicking] = useState(false);
+  const [carding, setCarding] = useState(false);
+  const cards = useData(() => api.get<any[]>(`/cards?knowledge_id=${id}`), [id]);
 
   useEffect(() => {
     if (!item) return;
@@ -447,6 +450,8 @@ export function KnowledgeDetail() {
             {!editing && <button className="btn block" onClick={() => { setEditing(true); setTab('content'); }}><Pencil />编辑</button>}
             <button className="btn block" onClick={ask}><MessageSquareText />就此内容问 AI</button>
             <button className="btn block" onClick={summarize} disabled={busy === 'ai' || !models.configured}>{busy === 'ai' ? <Spinner /> : <Sparkles />}AI 提炼</button>
+            <button className="btn block" onClick={() => setCarding(true)}><Layers />生成复习卡片</button>
+            {!!cards.data?.length && <Link className="xs faint" style={{ textAlign: 'center' }} to="/learning?tab=review">已有 {cards.data.length} 张卡片 · 去复习 →</Link>}
             <button className="btn block" onClick={() => patch({ pinned: !item.pinned })}><Pin />{item.pinned ? '取消置顶' : '置顶'}</button>
           </div>
           <div className="stack">
@@ -473,6 +478,7 @@ export function KnowledgeDetail() {
         </aside>
       </div>
       {picking && <LinkPicker itemId={id} onClose={() => setPicking(false)} onLinked={(d) => { setData(d); suggestions.reload(); }} />}
+      {carding && <CardDraftModal knowledgeId={id} onClose={() => setCarding(false)} onSaved={(n) => { setCarding(false); cards.reload(); toast(`已保存 ${n} 张卡片，今天开始复习`); }} />}
     </div>
   );
 }

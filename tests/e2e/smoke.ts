@@ -205,6 +205,10 @@ try {
     await page.click('aside >> text=AI 提炼');
     await page.waitForSelector('.point');
     await shot('06-knowledge-detail');
+    await page.click('aside >> text=生成复习卡片');
+    await page.waitForSelector('.card-draft');
+    await page.click('text=保存 2 张卡片');
+    await page.waitForSelector('.toast:has-text("已保存 2 张卡片")');
     await page.goto(`${BASE}/knowledge`);
     await page.fill('.search-box input', '莫奈');
     await page.waitForSelector('.k-item mark', { timeout: 8000 });
@@ -213,6 +217,26 @@ try {
     await page.fill('.search-box input', '');
     await page.waitForTimeout(600);
     await shot('07-knowledge-list');
+  });
+
+  await step('复习卡片：到期队列 → 显示答案 → 评分；忘了的当天再出现；全部过完后收尾', async () => {
+    await page.goto(`${BASE}/learning?tab=review`);
+    await page.waitForSelector('.flash');
+    const first = await page.locator('.flash-front').innerText();
+    await page.click('text=显示答案');
+    await page.waitForSelector('.rate-row');
+    await shot('07b-review-card');
+    await page.click('.rate-again');
+    await page.waitForSelector('text=显示答案');
+    if ((await page.locator('.flash-front').innerText()) === first) throw new Error('评分后应该换到下一张');
+    await page.keyboard.press('Space');
+    await page.keyboard.press('3');
+    await page.waitForSelector(`.flash-front:has-text("${first}")`);
+    await page.keyboard.press('Space');
+    await page.keyboard.press('3');
+    await page.waitForSelector('text=今天的复习完成了');
+    await page.click('text=全部卡片');
+    await page.waitForSelector('.list-row:has-text("下次复习 明天")');
   });
 
   await step('研究实验室：来源 → 陈述 → 事实核查（引文校验）→ 报告（自动来源列表）', async () => {

@@ -8,7 +8,7 @@ import { AiNotice, Empty, Field, Loading, Modal, PageHead, Spinner, Tabs, confir
 
 const PURPOSE: Record<string, string> = {
   chat: '对话', summarize: '提炼摘要', plan: '学习计划', review: '阶段总结', research: '研究分析', factcheck: '事实核查',
-  report: '研究报告', studio: '内容创作', test: '连通测试',
+  report: '研究报告', studio: '内容创作', cards: '生成卡片', test: '连通测试',
 };
 const COLORS = ['azurite', 'ochre', 'carmine', 'indigo', 'malachite', 'gamboge'];
 
@@ -245,7 +245,7 @@ function CallsTab() {
 
 const COUNT_LABEL: Record<string, string> = {
   knowledge_items: '知识条目', documents: '上传资料', conversations: '对话', messages: '消息', plans: '学习计划', tasks: '任务', study_logs: '学习记录',
-  reviews: '阶段总结', research_projects: '研究项目', research_sources: '研究来源', research_reports: '研究报告', content_topics: '选题', content_refs: '视觉参考',
+  reviews: '阶段总结', cards: '复习卡片', research_projects: '研究项目', research_sources: '研究来源', research_reports: '研究报告', content_topics: '选题', content_refs: '视觉参考',
 };
 
 function DataTab() {

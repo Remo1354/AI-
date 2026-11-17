@@ -46,7 +46,7 @@ Node 22 · Hono ─────────────────────�
 
 ## 数据模型
 
-全部定义在 `server/db/migrations/001_init.sql`。主键是短随机字符串，时间是 ISO-8601 UTC 字符串，日期是 `YYYY-MM-DD`。
+定义在 `server/db/migrations/` 下按编号排列的 `.sql` 文件里（`001_init.sql` 是主体）。主键是短随机字符串，时间是 ISO-8601 UTC 字符串，日期是 `YYYY-MM-DD`。
 
 ```
 domains ─────────────┬──────────────┬───────────────┬──────────────┐  六个学习方向
@@ -65,6 +65,7 @@ settings / schema_migrations
 
 几个要点：
 
+- **cards / card_reviews**（`002_cards.sql`）：复习卡片和复习记录。排程是 `server/routes/cards.ts` 里的纯函数 `schedule()`（SM-2 简化版），卡片可以指向出处的知识条目。
 - **documents 是通用的文件表**：聊天附件、知识库资料、研究来源、视觉参考图片都落在这里，按 sha256 去重。以后的「文件管理」模块直接建立在它之上。
 - **search_index 一张表管全站搜索**：知识、资料切片、对话消息、研究项目与来源、选题、计划都写进同一张 FTS5 表，用 `kind` 区分。
 - **向量检索已预留**：`document_chunks.embedding`（BLOB）和 `embedding_model` 两列目前为空。要启用时：给适配器接口加 `embed()`，上传时写入向量，在 `retrieveChunks()` 里把关键词得分和余弦相似度合并。几千到几万个切片的规模在内存里算余弦足够快，不需要向量数据库。

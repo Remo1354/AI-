@@ -5,6 +5,7 @@ import { api, qs } from '../lib/api';
 import { dayLabel, localDate, longDate, minutes, percent } from '../lib/format';
 import { useAction, useApp, useData } from '../lib/store';
 import { AiNotice, DomainSelect, DomainTag, Empty, Field, Loading, Markdown, Modal, PageHead, Spinner, Tabs, confirmDelete } from '../components/ui';
+import { ReviewTab } from './Cards';
 
 const PLAN_STATUS: Record<string, string> = { active: '进行中', paused: '已暂停', done: '已完成' };
 
@@ -285,7 +286,7 @@ function ReviewModal({ review, onClose, onSaved }: { review?: any; onClose: () =
   );
 }
 
-type Tab = 'today' | 'plans' | 'logs' | 'reviews';
+type Tab = 'today' | 'review' | 'plans' | 'logs' | 'reviews';
 
 export function Learning() {
   const { domains, domain, fail } = useApp();
@@ -304,6 +305,7 @@ export function Learning() {
   const plans = useData(() => api.get<any[]>(`/plans${qs({ domain_id: domainFilter })}`), [domainFilter]);
   const logs = useData(() => api.get<any[]>(`/logs${qs({ domain_id: domainFilter, limit: 200 })}`), [domainFilter]);
   const reviews = useData(() => api.get<any[]>('/reviews'), []);
+  const cardStats = useData(() => api.get(`/cards/stats?date=${date}`), [date]);
 
   const reloadTasks = () => { todayTasks.reload(); upcoming.reload(); inbox.reload(); stats.reload(); plans.reload(); };
   const setTab = (t: Tab) => { const n = new URLSearchParams(params); n.set('tab', t); n.delete('new'); setParams(n, { replace: true }); };
@@ -342,6 +344,7 @@ export function Learning() {
         value={tab} onChange={setTab}
         items={[
           { id: 'today', label: '今日', count: open.length || undefined },
+          { id: 'review', label: '复习', count: cardStats.data?.due || undefined },
           { id: 'plans', label: '学习计划', count: plans.data?.filter((p) => p.status === 'active').length || undefined },
           { id: 'logs', label: '学习记录' },
           { id: 'reviews', label: '阶段总结', count: reviews.data?.length || undefined },
@@ -383,6 +386,7 @@ export function Learning() {
                   <div><div className="stat-value">{stats.data.minutes_today}<small>分钟</small></div><div className="stat-label">今日已学</div></div>
                 </div>
                 <button className="btn block" onClick={() => setModal({ kind: 'log' })}><Plus />记录一次学习</button>
+                {cardStats.data?.due > 0 && <button className="btn accent block" onClick={() => setTab('review')}>复习 {cardStats.data.due} 张到期的卡片</button>}
               </div>
             )}
             {stats.data && (
@@ -403,6 +407,8 @@ export function Learning() {
           </aside>
         </div>
       )}
+
+      {tab === 'review' && <div className="page narrow" style={{ padding: 0, margin: 0 }}><ReviewTab onChanged={cardStats.reload} /></div>}
 
       {tab === 'plans' && (
         <div>

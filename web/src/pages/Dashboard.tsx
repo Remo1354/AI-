@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, ArrowUp, Check, ChevronRight, FileText, Flame, MessageSquareText, Plus, Sparkles } from 'lucide-react';
+import { ArrowRight, ArrowUp, Check, ChevronRight, FileText, Flame, Layers, MessageSquareText, Plus, Sparkles } from 'lucide-react';
 import { api } from '../lib/api';
 import { dayLabel, greeting, hours, localDate, longDate, minutes, parseDate, percent, timeAgo } from '../lib/format';
 import { useApp, useData } from '../lib/store';
@@ -98,6 +98,13 @@ export function Dashboard() {
             <Link className="card-link" to="/learning">学习中心<ChevronRight /></Link>
           </div>
           <div className="card-body flush">
+            {data.cards.due > 0 && (
+              <Link to="/learning?tab=review" className="list-row" style={{ background: 'var(--accent-tint)', margin: '0 0 6px' }}>
+                <Layers className="type-icon" style={{ color: 'var(--accent-ink)' }} />
+                <span className="grow"><b>{data.cards.due}</b> 张卡片今天到期，花几分钟复习一下</span>
+                <ChevronRight size={15} />
+              </Link>
+            )}
             {!data.tasks_today.length && (
               <Empty compact title="今天没有安排任务">
                 在学习计划里给任务设定日期，它们会在当天出现在这里。<br />
