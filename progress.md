@@ -75,5 +75,6 @@
 
 ## 代码托管状态
 
-- 分支：`claude/remo-ai-learning-platform-mmjm5m`
-- **截至本次更新，推送到 GitHub 被拒绝（403）**：Claude GitHub App 没有 `Remo1354/AI-` 的写权限。提交都在本地。授权后运行 `git push -u origin claude/remo-ai-learning-platform-mmjm5m` 即可。作为兜底，已另外导出完整的项目包（含 Git 历史）交给用户。
+- 仓库：`Remo1354/AI-`，分支 `claude/remo-ai-learning-platform-mmjm5m`，全部提交已推送到 GitHub。
+- 开发早期推送曾因 Claude GitHub App 没有写权限而被拒绝（403），授权后已解决。以后如果再遇到 403，处理办法见 `CLAUDE.md` 的「持久化规则」。
+- 还没有合并到 `main`，也没有开 Pull Request。

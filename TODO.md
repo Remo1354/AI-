@@ -4,7 +4,7 @@
 
 ## 需要用户动手的
 
-- [ ] **给 Claude 授权 GitHub 写权限**，然后把本地提交推上去（见 `progress.md` 末尾）。在此之前代码只存在于导出的项目包里。
+- [ ] 决定是否把开发分支合并到 `main`（目前代码都在 `claude/remo-ai-learning-platform-mmjm5m` 分支上）。
 - [ ] **填入真实的 API Key 并点「测试连接」**。如果某个服务商报错，把错误信息带到下一次开发会话。
 - [ ] **在 Windows 11 上实际跑一次** `bootstrap.cmd` 和 `start.cmd`，有问题记下来。
 - [ ] 决定长期运行在哪：本机，还是云服务器（见 `docs/DEPLOY.md`）。
