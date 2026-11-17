@@ -302,6 +302,7 @@ export function KnowledgeDetail() {
   const [draft, setDraft] = useState({ title: '', content: '', tags: '' });
   const [picking, setPicking] = useState(false);
   const [carding, setCarding] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const cards = useData(() => api.get<any[]>(`/cards?knowledge_id=${id}`), [id]);
 
   useEffect(() => {
@@ -369,7 +370,13 @@ export function KnowledgeDetail() {
 
           {tab === 'content' && (editing ? (
             <div className="stack">
-              <textarea className="textarea tall" value={draft.content} onChange={(e) => setDraft({ ...draft, content: e.target.value })} placeholder="支持 Markdown" aria-label="正文" />
+              <div className="seg" style={{ alignSelf: 'flex-start' }}>
+                <button className={!previewing ? 'active' : ''} onClick={() => setPreviewing(false)}>编辑</button>
+                <button className={previewing ? 'active' : ''} onClick={() => setPreviewing(true)}>预览</button>
+              </div>
+              {previewing
+                ? <div className="card pad" style={{ minHeight: 260 }}>{draft.content ? <Markdown>{draft.content}</Markdown> : <span className="faint">（空）</span>}</div>
+                : <textarea className="textarea tall" value={draft.content} onChange={(e) => setDraft({ ...draft, content: e.target.value })} placeholder="支持 Markdown" aria-label="正文" />}
               <Field label="标签" hint="用空格或逗号分隔"><input className="input" value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} /></Field>
               <div className="row">
                 <button className="btn primary" onClick={saveEdit} disabled={busy === 'save' || !draft.title.trim()}>保存</button>

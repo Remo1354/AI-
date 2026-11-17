@@ -16,6 +16,15 @@
 .dash-grid > .c4 { grid-column: span 4; }
 .dash-grid > .c6 { grid-column: span 6; }
 
+.guide { margin-bottom: var(--s-5); }
+.guide-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-2); padding: var(--s-3) var(--s-3) var(--s-4); }
+.guide-step { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-md); }
+.guide-step:hover { background: var(--surface-2); }
+.guide-step .check { margin-top: 2px; }
+.guide-step b { display: block; font-size: 14px; font-weight: 600; }
+.guide-step .xs { display: block; line-height: 1.5; margin-top: 2px; }
+.guide-step.done b { color: var(--ink-3); font-weight: 400; text-decoration: line-through; text-decoration-color: var(--line-strong); }
+
 /* 28 天学习节奏：墨色越深 = 当天学得越久 */
 .heat { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 3px; }
 .heat-cell { aspect-ratio: 1; border-radius: 4px; background: var(--wash-0); position: relative; min-width: 0; border: 0; padding: 0; }
@@ -224,11 +233,13 @@
 @media (max-width: 1100px) {
   .dash-hero { grid-template-columns: minmax(0, 1fr); align-items: start; gap: var(--s-5); }
   .dash-grid > .c7, .dash-grid > .c5, .dash-grid > .c6 { grid-column: span 12; }
+  .guide-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-grid > .c4 { grid-column: span 6; }
   .chat { grid-template-columns: 232px minmax(0, 1fr); }
 }
 @media (max-width: 720px) {
   .dash-hero h1 { font-size: 26px; }
+  .guide-steps { grid-template-columns: minmax(0, 1fr); }
   .dash-grid { gap: var(--s-4); }
   .dash-grid > .c4 { grid-column: span 12; }
   .dash-stats { gap: var(--s-6); }

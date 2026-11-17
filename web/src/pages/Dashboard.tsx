@@ -24,6 +24,7 @@ export function Dashboard() {
   const { data, reload, loading } = useData(() => api.get(`/dashboard?date=${date}`), [date]);
   const [ask, setAsk] = useState('');
   const [logging, setLogging] = useState(false);
+  const [guideHidden, setGuideHidden] = useState(() => localStorage.getItem('remo-guide-hidden') === '1');
 
   const startChat = async () => {
     const text = ask.trim();
@@ -90,6 +91,32 @@ export function Dashboard() {
           <AiNotice compact />
         </div>
       </section>
+
+      {(() => {
+        const steps = [
+          { done: models.configured, label: '接入一个 AI 模型', hint: '填入 API Key，对话、总结、规划才能用', to: '/settings' },
+          { done: data.knowledge.total > 0, label: '放进第一份资料或笔记', hint: '上传 PDF / DOCX，或写一条笔记', to: '/knowledge' },
+          { done: data.plans.length > 0, label: '制定一个学习计划', hint: '告诉 AI 想学什么，它帮你拆成任务', to: '/learning?tab=plans&new=1' },
+          { done: stats.minutes_28d > 0, label: '记录第一次学习', hint: '学完记一笔，节奏和进度从这里开始', to: '/learning' },
+        ];
+        if (guideHidden || steps.every((x) => x.done)) return null;
+        return (
+          <section className="card guide">
+            <div className="card-head">
+              <h2 className="card-title">开始使用 <span className="count">{steps.filter((x) => x.done).length} / {steps.length}</span></h2>
+              <button className="card-link" style={{ border: 0, background: 'none' }} onClick={() => { localStorage.setItem('remo-guide-hidden', '1'); setGuideHidden(true); }}>不再显示</button>
+            </div>
+            <div className="guide-steps">
+              {steps.map((x, i) => (
+                <Link key={x.label} to={x.to} className={`guide-step ${x.done ? 'done' : ''}`}>
+                  <span className={`check ${x.done ? 'done' : ''}`}>{x.done ? <Check /> : null}</span>
+                  <span><b>{i + 1}. {x.label}</b><span className="xs faint">{x.hint}</span></span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
 
       <div className="dash-grid">
         <section className="card c7">

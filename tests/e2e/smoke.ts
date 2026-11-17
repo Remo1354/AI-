@@ -99,6 +99,7 @@ try {
     await page.goto(`${BASE}/`);
     await page.waitForSelector('.dash-grid');
     if (!(await page.locator('.banner.warn').first().isVisible())) throw new Error('没有显示「未配置模型」提示');
+    if ((await page.locator('.guide-step').count()) !== 4 || (await page.locator('.guide-step.done').count()) !== 0) throw new Error('首次使用应显示 4 步引导且都未完成');
     await page.waitForTimeout(500);
     await shot('01-dashboard-empty');
   });
@@ -327,6 +328,7 @@ try {
     for (const expected of ['背 20 个艺术史英语词汇', '色彩基础 4 周计划', '色彩构成基础', '印象派为何在当时被排斥', '印象派笔记']) {
       if (!text.includes(expected)) throw new Error(`总览缺少：${expected}`);
     }
+    if (await page.locator('.guide').count()) throw new Error('四步都完成后引导清单应自动消失');
     await page.waitForTimeout(500);
     await shot('12-dashboard');
     await page.keyboard.press('Control+k');

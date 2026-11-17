@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, ListPlus, Pause, Pencil, Play, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { Eye, ListPlus, Pause, Pencil, Play, Plus, Sparkles, Trash2, Volume2, X } from 'lucide-react';
 import { api } from '../lib/api';
 import { dayLabel, localDate } from '../lib/format';
 import { useApp, useData } from '../lib/store';
@@ -14,6 +14,19 @@ const RATING: { id: Rating; label: string; key: string }[] = [
   { id: 'easy', label: '很熟', key: '4' },
 ];
 const intervalLabel = (days: number) => (days <= 0 ? '今天再来' : days < 30 ? `${days} 天后` : days < 365 ? `${Math.round(days / 30)} 个月后` : '1 年后');
+
+/** 纯英文的正面（单词、短语、句子）可以用浏览器自带的语音朗读。 */
+const canSpeak = (text: string) =>
+  typeof window !== 'undefined' && 'speechSynthesis' in window && /[a-zA-Z]{2,}/.test(text) && !/[\u3400-\u9fff]/.test(text) && text.length <= 300;
+function speak(text: string) {
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US';
+    u.rate = 0.92;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  } catch { /* 这个浏览器不支持语音，忽略 */ }
+}
 
 export function CardModal({ card, onClose, onSaved }: { card?: any; onClose: () => void; onSaved: () => void }) {
   const { fail } = useApp();
@@ -213,6 +226,9 @@ export function ReviewTab({ onChanged }: { onChanged: () => void }) {
             </div>
             <div className="flash">
               <div className="flash-front">{current.front}</div>
+              {canSpeak(current.front) && (
+                <button className="btn ghost sm" style={{ alignSelf: 'center' }} onClick={() => speak(current.front)}><Volume2 />朗读</button>
+              )}
               {shown ? <>
                 <hr className="rule" />
                 <div className="flash-back">{current.back || <span className="faint">（这张卡片没有填写答案）</span>}</div>
