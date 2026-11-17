@@ -1,0 +1,48 @@
+{
+  "name": "remo-ai-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Remo AI Workspace — 以个人 AI 学习平台为核心的工作区",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:server": "tsx watch --clear-screen=false server/index.ts",
+    "dev:web": "vite",
+    "build": "vite build",
+    "start": "node scripts/run-prod.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test --test-concurrency=1 \"tests/*.test.ts\"",
+    "check": "npm run typecheck && npm test",
+    "doctor": "node scripts/doctor.mjs",
+    "backup": "tsx scripts/backup.ts",
+    "restore": "tsx scripts/restore.ts",
+    "test:e2e": "node --import tsx tests/e2e/smoke.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.9.0",
+    "@hono/node-server": "^2.1.8",
+    "fflate": "^0.8.3",
+    "hono": "^4.13.19",
+    "mammoth": "^1.13.0",
+    "tsx": "^4.23.15",
+    "unpdf": "^1.9.1"
+  },
+  "devDependencies": {
+    "@fontsource/noto-serif-sc": "^5.3.1",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "lucide-react": "^1.73.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.18.5",
+    "remark-gfm": "^4.0.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}
