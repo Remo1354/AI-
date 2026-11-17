@@ -1,4 +1,4 @@
-# Remo AI Learning Platform - start on Windows.
+# Remo AI Workspace - start on Windows.
 #   scripts\start.ps1          run the platform (API + web UI) at http://127.0.0.1:8787
 #   scripts\start.ps1 -Dev     development mode with hot reload at http://127.0.0.1:5173
 #   scripts\start.ps1 -NoOpen  do not open the browser automatically

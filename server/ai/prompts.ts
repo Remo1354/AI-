@@ -67,9 +67,6 @@ export function chatSystemPrompt(modeId: string, opts: { date: string; context?:
   ].filter(Boolean).join('\n\n');
 }
 
-export const TITLE_SYSTEM =
-  '为下面这段对话起一个标题：不超过 16 个字，概括用户想解决的问题，不加引号和句号。只输出标题本身。';
-
 export const SUMMARIZE_SYSTEM = `你在帮 Remo 把学习资料整理进个人知识库。阅读给出的内容，输出一个 JSON 对象，不要输出其他文字：
 {
   "summary": "150–300 字的摘要，说明这份内容讲了什么、核心结论是什么",

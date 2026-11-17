@@ -1,4 +1,4 @@
-# Remo AI Learning Platform - Windows one-step setup.
+# Remo AI Workspace - Windows one-step setup.
 # Checks the environment, creates .env, installs dependencies, builds the web app.
 # Safe to run again at any time.
 #
@@ -12,7 +12,7 @@
 $ErrorActionPreference = 'Stop'
 Set-Location (Join-Path $PSScriptRoot '..')
 
-Write-Host '== Remo AI Learning Platform - setup ==' -ForegroundColor Cyan
+Write-Host '== Remo AI Workspace - setup ==' -ForegroundColor Cyan
 
 function Test-NodeVersion {
     $node = Get-Command node -ErrorAction SilentlyContinue

@@ -28,7 +28,7 @@ function readEnv() {
   return env;
 }
 
-console.log(`\nRemo AI Learning Platform · 环境检查（${os.platform()} ${os.arch()}）\n`);
+console.log(`\nRemo AI Workspace · 环境检查（${os.platform()} ${os.arch()}）\n`);
 
 // 1. Node.js
 const [major, minor] = process.versions.node.split('.').map(Number);

@@ -111,6 +111,7 @@
 .task-row .check { margin-top: 2px; }
 .task-row .actions { opacity: 0; display: flex; gap: 2px; }
 .task-row:hover .actions, .task-row:focus-within .actions { opacity: 1; }
+@media (hover: none) { .task-row .actions, .list-row .actions { opacity: 1; } }
 .task-meta { font-size: var(--fs-xs); color: var(--ink-3); display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1px; }
 .task-meta .overdue { color: var(--danger); }
 .inline-add { display: flex; gap: var(--s-2); padding: var(--s-2) var(--s-3); }
@@ -219,6 +220,10 @@
   .domain-row { grid-template-columns: minmax(0, 1fr) 72px auto; }
   .studio-hero { padding: var(--s-5); }
   .studio-hero h1 { font-size: 26px; }
+  /* 窄屏上色块退到角落并减淡，保证文字清晰 */
+  .studio-hero::before { width: 200px; height: 200px; right: 10px; top: -150px; opacity: 0.34; }
+  .studio-hero::after { width: 180px; height: 180px; right: -110px; top: -60px; opacity: 0.34; }
+  .studio-hero .layer-c { width: 130px; height: 130px; right: -50px; top: auto; bottom: -80px; opacity: 0.26; }
   .board { grid-auto-columns: 78%; }
   .cal-day { min-height: 64px; padding: 3px; }
   .cal-item { padding: 1px 3px; font-size: 10.5px; }

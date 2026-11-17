@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "== Remo AI Learning Platform · 初始化 =="
+echo "== Remo AI Workspace · 初始化 =="
 
 if ! command -v node >/dev/null 2>&1; then
   echo "✗ 没有找到 Node.js。需要 22.13 或更高版本。"

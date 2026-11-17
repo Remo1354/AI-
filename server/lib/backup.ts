@@ -6,6 +6,7 @@ import { all, closeDb, exec, get, now, openDb, run } from '../db';
 import { config, ensureDataDirs } from '../config';
 import { badRequest } from './http';
 
+// 备份格式的标识符。改名会让旧备份无法恢复，所以保持不变。
 export const BACKUP_APP = 'remo-ai-learning-platform';
 export const BACKUP_FORMAT = 1;
 
@@ -94,7 +95,7 @@ export function restoreBackup(buf: Uint8Array) {
   } catch {
     throw badRequest('备份包里没有 manifest.json，这不是本平台导出的备份。');
   }
-  if (manifest.app !== BACKUP_APP || !entries['remo.sqlite']) throw badRequest('这不是 Remo AI Learning Platform 的备份包。');
+  if (manifest.app !== BACKUP_APP || !entries['remo.sqlite']) throw badRequest('这不是 Remo AI Workspace 的备份包。');
   if (Number(manifest.format) > BACKUP_FORMAT) throw badRequest('这个备份来自更新版本的平台，请先升级程序再恢复。');
 
   ensureDataDirs();
