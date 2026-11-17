@@ -200,6 +200,52 @@ test('对话附加资料：资料内容进入模型上下文', async () => {
   assert.match(mock.requests.at(-1)!.body.messages[0].content, /莫奈的《日出·印象》/);
 });
 
+test('对话带图：两种协议下图片都按各自格式发给模型，旧图不重复发送', async () => {
+  const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='), (ch) => ch.charCodeAt(0));
+  const img = (await (await upload('/documents', { file: new File([png as BlobPart], '我的画.png', { type: 'image/png' }) })).json()).document;
+  assert.equal(img.kind, 'image');
+  const b64 = Buffer.from(png).toString('base64');
+
+  const conv = await api('POST', '/conversations', { mode: 'critique' }, 201);
+  const send = async (body: Record<string, unknown>) => parseSse(await (await app.request(`/api/conversations/${conv.id}/messages`, json('POST', body))).text());
+  const first = await send({ content: '', image_ids: [img.id] });
+  assert.ok(first.find((e) => e.event === 'done'), JSON.stringify(first.at(-1)));
+  let sent = mock.requests.at(-1)!.body.messages;
+  assert.match(sent[0].content, /作品点评/);
+  assert.deepEqual(sent[1].content, [
+    { type: 'text', text: '请看这张图。' },
+    { type: 'image_url', image_url: { url: `data:image/png;base64,${b64}` } },
+  ], 'OpenAI 兼容协议：image_url + data URL');
+  const stored = (await api('GET', `/conversations/${conv.id}`)).messages[0];
+  assert.deepEqual(stored.attachments, [{ id: img.id, url: `/api/documents/${img.id}/file` }]);
+
+  // 只保留最近两条带图提问里的图片
+  await send({ content: '第二张', image_ids: [img.id] });
+  await send({ content: '第三张', image_ids: [img.id] });
+  sent = mock.requests.at(-1)!.body.messages.filter((m: any) => m.role === 'user');
+  assert.equal(typeof sent[0].content, 'string');
+  assert.match(sent[0].content, /当时附有 1 张图片/);
+  assert.ok(Array.isArray(sent[1].content) && Array.isArray(sent[2].content));
+
+  // Anthropic 协议：image 块 + base64
+  const p = await api('POST', '/ai/providers', { name: 'Claude（看图）', kind: 'anthropic', base_url: mock.url, api_key: 'sk-ant-test', models: ['claude-opus-5-5'] }, 201);
+  const conv2 = await api('POST', '/conversations', {}, 201);
+  await (await app.request(`/api/conversations/${conv2.id}/messages`, json('POST', { content: '构图怎么样？', image_ids: [img.id], model_ref: `${p.id}::claude-opus-5-5` }))).text();
+  assert.deepEqual(mock.requests.at(-1)!.body.messages[0].content, [
+    { type: 'image', source: { type: 'base64', media_type: 'image/png', data: b64 } },
+    { type: 'text', text: '构图怎么样？' },
+  ]);
+
+  // 校验：不是图片、数量超限
+  const bad = await app.request(`/api/conversations/${conv.id}/messages`, json('POST', { content: 'x', image_ids: [state.docId] }));
+  assert.equal(bad.status, 400);
+  const many = await app.request(`/api/conversations/${conv.id}/messages`, json('POST', { content: 'x', image_ids: ['a', 'b', 'c', 'd', 'e'] }));
+  assert.equal(many.status, 400);
+  await api('DELETE', `/ai/providers/${p.id}`);
+  await api('DELETE', `/conversations/${conv.id}`);
+  await api('DELETE', `/conversations/${conv2.id}`);
+});
+
 test('知识库：创建、标签、中文全文检索、关联、AI 提炼、保存对话、导出', async () => {
   const a = await api('POST', '/knowledge', { title: '色彩构成基础', content: '色相、明度、纯度是色彩的三个属性。互补色位于色相环的两端。', tags: ['色彩', '基础'], category_id: 'cat1', domain_id: 'digital-art' }, 201);
   const b = await api('POST', '/knowledge', { title: '透视入门', content: '一点透视只有一个消失点，常用于表现纵深。', tags: ['透视'] }, 201);

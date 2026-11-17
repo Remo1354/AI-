@@ -53,7 +53,16 @@ export function createOpenAICompatibleAdapter(opts: {
         stream_options: { include_usage: true },
         messages: [
           ...(req.system ? [{ role: 'system', content: req.system }] : []),
-          ...req.messages,
+          ...req.messages.map((m) =>
+            m.images?.length
+              ? {
+                  role: m.role,
+                  content: [
+                    { type: 'text', text: m.content },
+                    ...m.images.map((img) => ({ type: 'image_url', image_url: { url: `data:${img.mime};base64,${img.data}` } })),
+                  ],
+                }
+              : { role: m.role, content: m.content }),
         ],
       };
       const maxTokens = req.maxTokens ?? opts.maxTokens;

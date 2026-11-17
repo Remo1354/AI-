@@ -27,7 +27,17 @@ export function createAnthropicAdapter(opts: { apiKey: string; baseUrl?: string;
   return {
     async *stream(req: ChatRequest): AsyncGenerator<ChatEvent> {
       try {
-        const messages: Anthropic.MessageParam[] = req.messages.map((m) => ({ role: m.role, content: m.content }));
+        // 带图的消息：图片块在前、文字在后
+        const messages: Anthropic.MessageParam[] = req.messages.map((m) =>
+          m.images?.length
+            ? {
+                role: m.role,
+                content: [
+                  ...m.images.map((img) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: img.mime, data: img.data } })),
+                  { type: 'text' as const, text: m.content },
+                ],
+              }
+            : { role: m.role, content: m.content });
         // 不传 thinking / temperature：新模型默认自适应思考，且会拒绝采样参数。
         const stream = client.messages.stream(
           {

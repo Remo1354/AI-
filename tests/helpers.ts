@@ -85,7 +85,8 @@ export async function startMockAi(): Promise<MockAi> {
 
       if (url.endsWith('/chat/completions')) {
         const system = body.messages.find((m: any) => m.role === 'system')?.content || '';
-        const lastUser = [...body.messages].reverse().find((m: any) => m.role === 'user')?.content || '';
+        const lastRaw = [...body.messages].reverse().find((m: any) => m.role === 'user')?.content || '';
+        const lastUser = typeof lastRaw === 'string' ? lastRaw : lastRaw.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('');
         const text = replyFor(mock, system, lastUser);
         const parts = [text.slice(0, 2), text.slice(2, 9), text.slice(9)].filter(Boolean);
         return sse(res, [
@@ -99,7 +100,7 @@ export async function startMockAi(): Promise<MockAi> {
       if (url.startsWith('/v1/messages')) {
         const system = typeof body.system === 'string' ? body.system : (body.system || []).map((b: any) => b.text).join('\n');
         const last = [...body.messages].reverse().find((m: any) => m.role === 'user');
-        const lastUser = typeof last?.content === 'string' ? last.content : (last?.content || []).map((b: any) => b.text).join('');
+        const lastUser = typeof last?.content === 'string' ? last.content : (last?.content || []).filter((b: any) => b.type === 'text').map((b: any) => b.text).join('');
         const text = `Claude：${replyFor(mock, system, lastUser)}`;
         const ev = (type: string, data: object) => `event: ${type}\ndata: ${JSON.stringify({ type, ...data })}\n\n`;
         return sse(res, [

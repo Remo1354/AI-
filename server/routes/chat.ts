@@ -3,13 +3,14 @@ import { streamSSE } from 'hono/streaming';
 import { all, get, insert, newId, now, run, tx, update } from '../db';
 import { config } from '../config';
 import { badRequest, notFound, readJson, requireText, today, parseJson } from '../lib/http';
-import { DOC_PUBLIC_COLUMNS, touchDocuments } from '../lib/documents';
+import fs from 'node:fs';
+import { DOC_PUBLIC_COLUMNS, documentPath, getDocument, touchDocuments } from '../lib/documents';
 import { createKnowledge } from '../lib/knowledge';
 import { indexDoc, removeByParent, retrieveChunks } from '../lib/search';
 import { chatSystemPrompt, getMode } from '../ai/prompts';
 import { resolveModel } from '../ai/registry';
 import { streamChat } from '../ai/service';
-import { AiError, type ChatMessage } from '../ai/types';
+import { AiError, type ChatMessage, type ImagePart } from '../ai/types';
 
 export const chatRoutes = new Hono();
 
@@ -20,9 +21,32 @@ interface ConversationRow {
 interface MessageRow {
   id: string; conversation_id: string; role: 'user' | 'assistant'; content: string; model_ref: string | null;
   context_note: string | null; error: string | null; input_tokens: number | null; output_tokens: number | null; created_at: string;
+  attachments?: string;
 }
 
-const presentMessage = (m: MessageRow) => ({ ...m, context_note: parseJson(m.context_note, null) });
+const IMAGE_MIME: Record<string, ImagePart['mime']> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' };
+const MAX_IMAGES = 4;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+/** 历史里只把最近几条带图的提问连图一起发给模型，更早的只保留文字，控制每次请求的体积。 */
+const IMAGE_TURNS_KEPT = 2;
+
+const attachmentIds = (m: MessageRow) => parseJson<string[]>(m.attachments, []);
+
+function loadImages(ids: string[]): ImagePart[] {
+  const out: ImagePart[] = [];
+  for (const id of ids) {
+    const doc = getDocument(id);
+    const mime = doc && IMAGE_MIME[doc.ext];
+    if (!doc || !mime) continue;
+    try { out.push({ mime, data: fs.readFileSync(documentPath(doc)).toString('base64') }); } catch { /* 原图已被删除 */ }
+  }
+  return out;
+}
+
+const presentMessage = (m: MessageRow) => ({
+  ...m, context_note: parseJson(m.context_note, null),
+  attachments: attachmentIds(m).map((id) => ({ id, url: `/api/documents/${id}/file` })),
+});
 
 function conversationDocs(id: string) {
   return all<{ id: string; title: string; chars: number; status: string; text?: string }>(
@@ -133,12 +157,18 @@ function buildContext(conversationId: string, question: string) {
 /** 整理历史：跳过空回复，合并连续同角色消息，保证 user/assistant 交替且以 user 开头。 */
 function buildHistory(conversationId: string, budget = 120_000): ChatMessage[] {
   const rows = all<MessageRow>('SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at, rowid', conversationId);
+  const withImages = rows.filter((m) => m.role === 'user' && attachmentIds(m).length).slice(-IMAGE_TURNS_KEPT).map((m) => m.id);
   const out: ChatMessage[] = [];
   for (const m of rows) {
     if (!m.content.trim()) continue;
+    const ids = m.role === 'user' ? attachmentIds(m) : [];
+    const images = ids.length && withImages.includes(m.id) ? loadImages(ids) : [];
+    const text = ids.length && !images.length ? `${m.content}\n\n（这条消息当时附有 ${ids.length} 张图片，此处不再重复发送）` : m.content;
     const last = out[out.length - 1];
-    if (last && last.role === m.role) last.content += `\n\n${m.content}`;
-    else out.push({ role: m.role, content: m.content });
+    if (last && last.role === m.role) {
+      last.content += `\n\n${text}`;
+      if (images.length) last.images = [...(last.images || []), ...images];
+    } else out.push({ role: m.role, content: text, ...(images.length ? { images } : {}) });
   }
   let used = 0;
   let start = out.length;
@@ -163,7 +193,17 @@ chatRoutes.post('/conversations/:id/messages', async (c) => {
     ? get<MessageRow>("SELECT * FROM messages WHERE conversation_id = ? AND role = 'user' ORDER BY rowid DESC LIMIT 1", conv.id)
     : undefined;
   if (regenerate && !lastUser) throw badRequest('这个对话里还没有可以重新回答的问题');
-  const content = lastUser ? lastUser.content : requireText(b.content, '消息内容', 200_000);
+  // 图片附件：必须是已上传的图片，数量和大小有上限
+  const imageIds: string[] = lastUser ? [] : [...new Set((Array.isArray(b.image_ids) ? b.image_ids : []).map(String))];
+  if (imageIds.length > MAX_IMAGES) throw badRequest(`一条消息最多附 ${MAX_IMAGES} 张图片`);
+  for (const id of imageIds) {
+    const doc = getDocument(id);
+    if (!doc || doc.kind !== 'image') throw badRequest('附带的图片不存在，请重新上传');
+    if (!IMAGE_MIME[doc.ext]) throw badRequest(`${doc.ext.replace('.', '').toUpperCase()} 格式不能发给模型，请使用 PNG、JPG、WebP 或 GIF`);
+    if (doc.size > MAX_IMAGE_BYTES) throw badRequest(`图片「${doc.filename}」超过 5 MB，请压缩后再发`);
+  }
+  const typed = typeof b.content === 'string' ? b.content.trim() : '';
+  const content = lastUser ? lastUser.content : imageIds.length && !typed ? '请看这张图。' : requireText(b.content, '消息内容', 200_000);
   const modelRef = (b.model_ref as string | undefined) || conv.model_ref;
   const resolved = resolveModel(modelRef); // 未配置模型时在这里抛出 409，不会写入或删除任何消息
 
@@ -182,7 +222,7 @@ chatRoutes.post('/conversations/:id/messages', async (c) => {
         run('DELETE FROM messages WHERE id = ?', m.id);
       }
     } else {
-      insert('messages', { id: userId, conversation_id: conv.id, role: 'user', content, created_at: ts });
+      insert('messages', { id: userId, conversation_id: conv.id, role: 'user', content, attachments: JSON.stringify(imageIds), created_at: ts });
       if (isFirst && conv.title === '新对话') patch.title = content.replace(/\s+/g, ' ').slice(0, 28);
       indexDoc('message', userId, String(patch.title || conv.title), content, conv.id);
     }

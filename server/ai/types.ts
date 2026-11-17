@@ -3,9 +3,17 @@
  * 业务代码只依赖这里的类型；接入新的模型服务 = 新增一个实现 ModelAdapter 的文件，
  * 然后在 registry.ts 里登记 kind。
  */
+/** 随消息发送的图片：base64 数据，不含 data: 前缀。 */
+export interface ImagePart {
+  mime: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
+  data: string;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  /** 只有 user 消息可以带图；模型需要支持图片输入 */
+  images?: ImagePart[];
 }
 
 export interface ChatRequest {
