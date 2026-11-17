@@ -69,6 +69,12 @@
 .msg-actions .btn { color: var(--ink-3); }
 .msg-note { font-size: var(--fs-xs); color: var(--ink-3); display: flex; align-items: center; gap: 5px; }
 .msg-note svg { width: 13px; height: 13px; }
+.msg-images { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 86%; }
+.msg-images img { display: block; max-width: 240px; max-height: 240px; border-radius: 12px; border: 1px solid var(--line); object-fit: cover; background: var(--surface-2); }
+.thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.thumb { position: relative; width: 58px; height: 58px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; overflow: hidden; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb button { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; border-radius: 50%; border: 0; background: rgba(20, 18, 14, 0.72); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0; }
 .caret::after { content: '▍'; animation: blink 1s steps(2) infinite; color: var(--accent); margin-left: 1px; }
 @keyframes blink { 50% { opacity: 0; } }
 .composer-wrap { padding: var(--s-3) var(--s-6) var(--s-5); }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowUp, BookmarkPlus, Check, Copy, FileText, Layers, Menu, Paperclip, Pencil, Pin, Plus, RotateCcw, Square, Trash2, Upload, X,
+  ArrowUp, BookmarkPlus, Check, Copy, FileText, ImagePlus, Layers, Menu, Paperclip, Pencil, Pin, Plus, RotateCcw, Square, Trash2, Upload, X,
 } from 'lucide-react';
 import { api, streamChat } from '../lib/api';
 import { chars, localDate, timeAgo } from '../lib/format';
@@ -12,7 +12,9 @@ interface Message {
   id: string; role: 'user' | 'assistant'; content: string; error?: string | null; model_ref?: string | null;
   context_note?: { mode: string; documents: { id: string; title: string }[]; chunks?: number; chars: number } | null;
   created_at?: string; pending?: boolean;
+  attachments?: { id: string; url: string }[];
 }
+const MAX_IMAGES = 4;
 interface Mode { id: string; name: string; description: string; starters: string[] }
 
 /** 把一条回答（或其中一部分）存进知识库 */
@@ -121,6 +123,9 @@ export function Assistant() {
   const [attaching, setAttaching] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [copied, setCopied] = useState('');
+  const [images, setImages] = useState<{ id: string; url: string }[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInput = useRef<HTMLInputElement>(null);
 
   const abort = useRef<AbortController | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -202,14 +207,37 @@ export function Assistant() {
 
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
-    if (!content || streaming) return;
+    const attached = text === undefined ? images : [];
+    if ((!content && !attached.length) || streaming || uploadingImage) return;
     if (!models.configured) { toast('请先在设置中配置 AI 模型', 'error'); return; }
     let cid: string;
     try { cid = await ensureConversation(); } catch (err) { fail(err); return; }
     setInput('');
+    setImages([]);
     const tempUser = `tmp-u-${Date.now()}`;
-    setMessages((m) => [...m, { id: tempUser, role: 'user', content }, { id: `tmp-a-${Date.now()}`, role: 'assistant', content: '', pending: true }]);
-    await runStream(cid, { content }, tempUser);
+    setMessages((m) => [
+      ...m,
+      { id: tempUser, role: 'user', content: content || '请看这张图。', attachments: attached },
+      { id: `tmp-a-${Date.now()}`, role: 'assistant', content: '', pending: true },
+    ]);
+    await runStream(cid, { content, image_ids: attached.map((i) => i.id) }, tempUser);
+  };
+
+  /** 给下一条消息附图：从文件选择、粘贴或截图而来。图片先上传，发送时只带上它们的编号。 */
+  const addImages = async (files: File[]) => {
+    const picked = files.filter((f) => f.type.startsWith('image/')).slice(0, MAX_IMAGES - images.length);
+    if (!picked.length) { if (files.length) toast(`一条消息最多附 ${MAX_IMAGES} 张图片`, 'error'); return; }
+    setUploadingImage(true);
+    for (const file of picked) {
+      try {
+        if (file.size > 5 * 1024 * 1024) { toast(`「${file.name}」超过 5 MB，请压缩后再发`, 'error'); continue; }
+        const r = await api.upload('/documents', { file });
+        if (r.document.kind !== 'image') { toast('只能附加图片（PNG、JPG、WebP、GIF）', 'error'); continue; }
+        setImages((list) => (list.some((i) => i.id === r.document.id) ? list : [...list, { id: r.document.id, url: `/api/documents/${r.document.id}/file` }]));
+      } catch (err) { fail(err); }
+    }
+    setUploadingImage(false);
+    box.current?.focus();
   };
 
   /** 对最后一个问题重新作答：用于回答失败、被中止，或想换个模型再问一次。 */
@@ -370,7 +398,14 @@ export function Assistant() {
           ) : (
             <div className="chat-inner">
               {messages.map((m, i) => m.role === 'user' ? (
-                <div key={m.id} className="msg user"><div className="bubble">{m.content}</div></div>
+                <div key={m.id} className="msg user">
+                  {!!m.attachments?.length && (
+                    <div className="msg-images">
+                      {m.attachments.map((a) => <a key={a.id} href={a.url} target="_blank" rel="noreferrer"><img src={a.url} alt="附带的图片" loading="lazy" /></a>)}
+                    </div>
+                  )}
+                  <div className="bubble">{m.content}</div>
+                </div>
               ) : (
                 <div key={m.id} className="msg assistant">
                   <div className="msg-role"><Layers size={12} />助手{modelLabel(m.model_ref) ? <span style={{ letterSpacing: 0, textTransform: 'none' }}>· {modelLabel(m.model_ref)}</span> : null}</div>
@@ -410,16 +445,32 @@ export function Assistant() {
         <div className="composer-wrap">
           <div style={{ maxWidth: 780, margin: '0 auto 8px' }}><AiNotice /></div>
           <div className="composer">
+            {(images.length > 0 || uploadingImage) && (
+              <div className="thumbs">
+                {images.map((img) => (
+                  <span key={img.id} className="thumb">
+                    <img src={img.url} alt="待发送的图片" />
+                    <button onClick={() => setImages(images.filter((i) => i.id !== img.id))} aria-label="移除图片"><X size={12} /></button>
+                  </span>
+                ))}
+                {uploadingImage && <span className="thumb"><Spinner /></span>}
+              </div>
+            )}
             <textarea
               ref={box} rows={1} value={input} placeholder={currentMode ? `${currentMode.name}：输入问题，Enter 发送，Shift + Enter 换行` : '输入问题…'} aria-label="消息"
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }}
+              onPaste={(e) => { const files = Array.from(e.clipboardData.files); if (files.some((f) => f.type.startsWith('image/'))) { e.preventDefault(); addImages(files); } }}
             />
             <div className="composer-foot">
-              <button className="btn ghost sm" onClick={() => setAttaching(true)}><Paperclip />附加资料</button>
+              <div className="row" style={{ gap: 2 }}>
+                <button className="btn ghost sm" onClick={() => setAttaching(true)}><Paperclip />附加资料</button>
+                <input ref={imageInput} type="file" hidden multiple accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => { addImages(Array.from(e.target.files || [])); e.target.value = ''; }} />
+                <button className="btn ghost sm" onClick={() => imageInput.current?.click()} disabled={images.length >= MAX_IMAGES} title="把画作、设计稿或截图发给助手看（也可以直接粘贴）。需要所选模型支持图片。"><ImagePlus />图片</button>
+              </div>
               {streaming
                 ? <button className="btn sm" onClick={stop}><Square />停止</button>
-                : <button className="btn accent sm" onClick={() => send()} disabled={!input.trim() || !models.configured}>发送<ArrowUp /></button>}
+                : <button className="btn accent sm" onClick={() => send()} disabled={(!input.trim() && !images.length) || uploadingImage || !models.configured}>发送<ArrowUp /></button>}
             </div>
           </div>
         </div>

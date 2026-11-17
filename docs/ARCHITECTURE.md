@@ -80,6 +80,8 @@ interface ModelAdapter {
 }
 ```
 
+消息可以带图片（`ChatMessage.images`，base64）：两个适配器各自转成对应协议的格式；历史里只有最近两条带图的提问会重新发送图片。
+
 - `adapters/anthropic.ts`：官方 SDK 的流式接口。显式传入密钥和地址；不发送采样参数；按类型区分错误（密钥无效、模型不存在、限流、网络）。
 - `adapters/openai-compatible.ts`：Chat Completions 协议 + SSE 解析。个别服务不认识 `stream_options` 时自动去掉重试。
 - `registry.ts`：模型来源 = 数据库里的 `providers` + `.env` 提供的只读来源。模型用 `providerId::modelId` 引用（modelRef）。

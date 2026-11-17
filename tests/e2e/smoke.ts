@@ -161,6 +161,25 @@ try {
     await shot('03-assistant');
   });
 
+  await step('AI 助手：作品点评模式下附图提问，图片随消息发给模型并显示在对话里', async () => {
+    await page.goto(`${BASE}/assistant`);
+    await page.click('.mode-card:has-text("作品点评")');
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+    await page.setInputFiles('.composer input[type=file]', { name: '我的画.png', mimeType: 'image/png', buffer: png });
+    await page.waitForSelector('.thumb img');
+    await page.fill('.composer textarea', '帮我看看这张画的构图');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('.msg.assistant .msg-actions', { timeout: 15000 });
+    await page.waitForSelector('.msg.user .msg-images img');
+    const sent = mock.requests.at(-1)!.body.messages;
+    if (!String(sent[0].content).includes('作品点评')) throw new Error('没有使用作品点评模式的提示词');
+    const parts = sent.at(-1).content;
+    if (!Array.isArray(parts) || !parts.some((p: any) => p.type === 'image_url' && String(p.image_url?.url).startsWith('data:image/png;base64,'))) throw new Error('图片没有发给模型');
+    await page.reload();
+    await page.waitForSelector('.msg.user .msg-images img');
+    await shot('03b-assistant-image');
+  });
+
   let planUrl = '';
   await step('学习中心：AI 生成计划草稿 → 确认保存 → 完成任务 → 记录学习', async () => {
     await page.goto(`${BASE}/learning?tab=plans`);
